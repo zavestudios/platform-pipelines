@@ -1,0 +1,122 @@
+name: Terraform Plan
+
+on:
+  workflow_call:
+    inputs:
+      tf_working_dir:
+        description: 'Directory containing Terraform configuration'
+        required: false
+        type: string
+        default: '.'
+      terraform_version:
+        description: 'Terraform version to use'
+        required: false
+        type: string
+        default: 'latest'
+      tf_var_file:
+        description: 'Path to tfvars file (relative to tf_working_dir)'
+        required: false
+        type: string
+        default: ''
+      enable_fmt_check:
+        description: 'Run terraform fmt -check'
+        required: false
+        type: boolean
+        default: true
+      additional_args:
+        description: 'Additional arguments to pass to terraform plan'
+        required: false
+        type: string
+        default: ''
+    secrets:
+      TF_VARS:
+        description: 'Terraform variables as JSON (optional)'
+        required: false
+
+jobs:
+  plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ${{ inputs.tf_working_dir }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ inputs.terraform_version }}
+
+      - name: Terraform Format Check
+        if: ${{ inputs.enable_fmt_check }}
+        id: fmt
+        run: terraform fmt -check -recursive
+        continue-on-error: true
+
+      - name: Terraform Init
+        id: init
+        run: terraform init
+
+      - name: Terraform Validate
+        id: validate
+        run: terraform validate -no-color
+
+      - name: Write TF Vars
+        if: ${{ secrets.TF_VARS != '' }}
+        run: echo '${{ secrets.TF_VARS }}' > terraform.auto.tfvars.json
+
+      - name: Terraform Plan
+        id: plan
+        run: |
+          set -o pipefail
+          ARGS="${{ inputs.additional_args }}"
+          if [ -n "${{ inputs.tf_var_file }}" ]; then
+            ARGS="$ARGS -var-file=${{ inputs.tf_var_file }}"
+          fi
+          terraform plan -no-color -input=false $ARGS | tee plan.txt
+        continue-on-error: true
+
+      - name: Comment Plan on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        env:
+          PLAN: "${{ steps.plan.outputs.stdout }}"
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const plan = fs.readFileSync('${{ inputs.tf_working_dir }}/plan.txt', 'utf8');
+            const maxLength = 65536;
+            const truncatedPlan = plan.length > maxLength
+              ? plan.substring(0, maxLength) + '\n\n... (truncated)'
+              : plan;
+
+            const output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
+            #### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
+            #### Terraform Validation 🤖\`${{ steps.validate.outcome }}\`
+            #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
+
+            <details><summary>Show Plan</summary>
+
+            \`\`\`terraform
+            ${truncatedPlan}
+            \`\`\`
+
+            </details>
+
+            *Pusher: @${{ github.actor }}, Working Directory: \`${{ inputs.tf_working_dir }}\`, Workflow: \`${{ github.workflow }}\`*`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.owner,
+              repo: context.repo,
+              body: output
+            });
+
+      - name: Terraform Plan Status
+        if: steps.plan.outcome == 'failure'
+        run: exit 1

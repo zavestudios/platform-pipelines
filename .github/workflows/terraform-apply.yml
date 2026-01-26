@@ -1,0 +1,64 @@
+name: Terraform Apply
+
+on:
+  workflow_call:
+    inputs:
+      tf_working_dir:
+        description: 'Directory containing Terraform configuration'
+        required: false
+        type: string
+        default: '.'
+      terraform_version:
+        description: 'Terraform version to use'
+        required: false
+        type: string
+        default: 'latest'
+      tf_var_file:
+        description: 'Path to tfvars file (relative to tf_working_dir)'
+        required: false
+        type: string
+        default: ''
+      additional_args:
+        description: 'Additional arguments to pass to terraform apply'
+        required: false
+        type: string
+        default: ''
+    secrets:
+      TF_VARS:
+        description: 'Terraform variables as JSON (optional)'
+        required: false
+
+jobs:
+  apply:
+    name: Terraform Apply
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ${{ inputs.tf_working_dir }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ inputs.terraform_version }}
+
+      - name: Terraform Init
+        id: init
+        run: terraform init
+
+      - name: Write TF Vars
+        if: ${{ secrets.TF_VARS != '' }}
+        run: echo '${{ secrets.TF_VARS }}' > terraform.auto.tfvars.json
+
+      - name: Terraform Apply
+        id: apply
+        run: |
+          ARGS="${{ inputs.additional_args }}"
+          if [ -n "${{ inputs.tf_var_file }}" ]; then
+            ARGS="$ARGS -var-file=${{ inputs.tf_var_file }}"
+          fi
+          terraform apply -auto-approve -input=false $ARGS

@@ -1,0 +1,38 @@
+name: Validate Jekyll Front Matter
+
+on:
+  workflow_call:
+    inputs:
+      python_version:
+        description: 'Python version to use'
+        required: false
+        type: string
+        default: '3.11'
+      validation_script:
+        description: 'Path to validation script'
+        required: false
+        type: string
+        default: 'scripts/validate_front_matter.py'
+
+jobs:
+  validate-front-matter:
+    name: Validate Front Matter
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python_version }}
+
+      - name: Install deps
+        run: pip install pyyaml python-dateutil
+
+      - name: Validate posts
+        run: python ${{ inputs.validation_script }}

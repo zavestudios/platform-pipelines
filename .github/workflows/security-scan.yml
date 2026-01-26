@@ -1,0 +1,29 @@
+name: Security Scan
+
+on:
+  workflow_call:
+    inputs:
+      fetch_depth:
+        description: 'Git fetch depth (0 for full history)'
+        required: false
+        type: number
+        default: 0
+
+jobs:
+  gitleaks:
+    name: Secret Scan (Gitleaks)
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: ${{ inputs.fetch_depth }}
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

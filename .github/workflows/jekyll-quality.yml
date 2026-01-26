@@ -1,0 +1,68 @@
+name: Jekyll Site Quality
+
+on:
+  workflow_call:
+    inputs:
+      ruby_version:
+        description: 'Ruby version to use'
+        required: false
+        type: string
+        default: '3.1'
+      markdown_globs:
+        description: 'Glob patterns for markdown files to lint'
+        required: false
+        type: string
+        default: |
+          **/*.md
+          !_site/**
+          !vendor/**
+          !node_modules/**
+      lychee_args:
+        description: 'Arguments to pass to lychee link checker'
+        required: false
+        type: string
+        default: |
+          --verbose
+          --no-progress
+          --accept 200,204,301,302
+          --exclude-mail
+          --exclude-path _site
+          .
+      lychee_config_path:
+        description: 'Path to lychee config file (optional)'
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  build-lint-links:
+    name: Build, Lint, and Check Links
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: ${{ inputs.ruby_version }}
+          bundler-cache: true
+
+      - name: Build Jekyll site
+        run: bundle exec jekyll build
+
+      - name: Markdown lint
+        uses: DavidAnson/markdownlint-cli2-action@v18
+        with:
+          globs: ${{ inputs.markdown_globs }}
+
+      - name: Link check
+        uses: lycheeverse/lychee-action@v1
+        with:
+          args: ${{ inputs.lychee_args }} ${{ inputs.lychee_config_path != '' && format('--config {0}', inputs.lychee_config_path) || '' }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -35,6 +35,54 @@ As our infrastructure footprint expands, this repo scales with us - whether we'r
 
 ### Terraform
 
+#### `.github/workflows/terraform-plan.yml`
+Generic Terraform plan workflow (provider-agnostic).
+
+**Features:**
+- Runs `terraform init`, `validate`, `fmt -check`, `plan`
+- Comments plan output on pull requests
+- Configurable Terraform version and working directory
+- Supports tfvars files and JSON variables
+
+**Usage:**
+```yaml
+# In your infrastructure repo
+name: Terraform Plan
+on: [pull_request]
+
+jobs:
+  plan:
+    uses: eckslopez/platform-pipelines/.github/workflows/terraform-plan.yml@main
+    with:
+      tf_working_dir: ./terraform
+      terraform_version: latest
+```
+
+#### `.github/workflows/terraform-apply.yml`
+Generic Terraform apply workflow (provider-agnostic).
+
+**Features:**
+- Runs `terraform init` and `apply`
+- Auto-approves apply
+- Configurable Terraform version and working directory
+- Supports tfvars files and JSON variables
+
+**Usage:**
+```yaml
+# In your infrastructure repo
+name: Terraform Apply
+on:
+  push:
+    branches: [main]
+
+jobs:
+  apply:
+    uses: eckslopez/platform-pipelines/.github/workflows/terraform-apply.yml@main
+    with:
+      tf_working_dir: ./terraform
+      terraform_version: latest
+```
+
 #### `.github/workflows/terraform-rds.yml`
 AWS-specific Terraform workflow with OIDC authentication.
 
@@ -59,6 +107,101 @@ jobs:
       run_apply: true
     secrets:
       AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+```
+
+### Security
+
+#### `.github/workflows/security-scan.yml`
+Secret scanning with Gitleaks.
+
+**Features:**
+- Scans repository for exposed secrets and credentials
+- Works with any repository type
+- Configurable git fetch depth
+
+**Usage:**
+```yaml
+# In your repo
+name: Security Scan
+on:
+  pull_request:
+  schedule:
+    - cron: "0 9 * * 1"
+
+jobs:
+  security:
+    uses: eckslopez/platform-pipelines/.github/workflows/security-scan.yml@main
+```
+
+### Jekyll / Static Sites
+
+#### `.github/workflows/jekyll-deploy.yml`
+Build and deploy Jekyll site to GitHub Pages.
+
+**Features:**
+- Builds Jekyll site with configurable Ruby version
+- Deploys to GitHub Pages
+- Configurable Jekyll environment
+
+**Usage:**
+```yaml
+# In your Jekyll repo
+name: Deploy Jekyll Site
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    uses: eckslopez/platform-pipelines/.github/workflows/jekyll-deploy.yml@main
+    with:
+      ruby_version: '3.1'
+```
+
+#### `.github/workflows/jekyll-quality.yml`
+Jekyll site quality checks (build, markdown lint, link checking).
+
+**Features:**
+- Builds Jekyll site
+- Runs markdownlint on all markdown files
+- Checks for broken links with lychee
+- Configurable markdown globs and lychee options
+
+**Usage:**
+```yaml
+# In your Jekyll repo
+name: Site Quality
+on: [pull_request]
+
+jobs:
+  quality:
+    uses: eckslopez/platform-pipelines/.github/workflows/jekyll-quality.yml@main
+    with:
+      lychee_config_path: .github/lychee.toml
+```
+
+#### `.github/workflows/jekyll-validate-front-matter.yml`
+Validate Jekyll post front matter.
+
+**Features:**
+- Validates YAML front matter in Jekyll posts
+- Runs custom validation script
+- Configurable Python version and script path
+
+**Usage:**
+```yaml
+# In your Jekyll repo
+name: Validate Front Matter
+on: [pull_request]
+
+jobs:
+  validate:
+    uses: eckslopez/platform-pipelines/.github/workflows/jekyll-validate-front-matter.yml@main
 ```
 
 ### Database
@@ -96,8 +239,6 @@ jobs:
 
 See [Issues](https://github.com/eckslopez/platform-pipelines/issues) for planned additions:
 
-- Generic Terraform plan workflow (provider-agnostic)
-- Generic Terraform apply workflow (provider-agnostic)
 - tfsec security scanning workflow
 - Terraform cost estimation
 - Multi-environment deployment patterns
@@ -132,12 +273,15 @@ uses: eckslopez/platform-pipelines/.github/workflows/terraform-rds.yml@main
 platform-pipelines/
 ├── .github/
 │   └── workflows/
-│       ├── terraform-rds.yml           # AWS Terraform with OIDC
-│       ├── terraform-plan.yml          # Generic plan (planned)
-│       ├── terraform-apply.yml         # Generic apply (planned)
-│       ├── tfsec.yml                   # Security scanning (planned)
-│       └── db-bootstrap-psql.yml       # PostgreSQL bootstrap
-├── docs/                                # Additional documentation (planned)
+│       ├── terraform-plan.yml                    # Generic Terraform plan
+│       ├── terraform-apply.yml                   # Generic Terraform apply
+│       ├── terraform-rds.yml                     # AWS Terraform with OIDC
+│       ├── security-scan.yml                     # Gitleaks secret scanning
+│       ├── jekyll-deploy.yml                     # Jekyll GitHub Pages deploy
+│       ├── jekyll-quality.yml                    # Jekyll quality checks
+│       ├── jekyll-validate-front-matter.yml      # Jekyll front matter validation
+│       └── db-bootstrap-psql.yml                 # PostgreSQL bootstrap
+├── docs/                                          # Additional documentation (planned)
 └── README.md
 ```
 
