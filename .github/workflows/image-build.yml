@@ -1,0 +1,84 @@
+name: Image Build
+
+on:
+  workflow_call:
+    inputs:
+      context:
+        description: 'Build context'
+        required: false
+        type: string
+        default: '.'
+      dockerfile:
+        description: 'Dockerfile path'
+        required: false
+        type: string
+        default: 'Dockerfile'
+      tags:
+        description: 'Image tags (comma or newline separated)'
+        required: false
+        type: string
+        default: 'app:ci'
+      push:
+        description: 'Push image to registry'
+        required: false
+        type: boolean
+        default: false
+      load:
+        description: 'Load image into local Docker'
+        required: false
+        type: boolean
+        default: false
+      build_args:
+        description: 'Build args (newline separated)'
+        required: false
+        type: string
+        default: ''
+      platforms:
+        description: 'Target platforms (comma separated, e.g. linux/amd64,linux/arm64)'
+        required: false
+        type: string
+        default: ''
+      target:
+        description: 'Target stage for multi-stage Dockerfiles'
+        required: false
+        type: string
+        default: ''
+      cache_from:
+        description: 'Cache sources (newline separated)'
+        required: false
+        type: string
+        default: ''
+      cache_to:
+        description: 'Cache destinations (newline separated)'
+        required: false
+        type: string
+        default: ''
+
+jobs:
+  build:
+    name: Build Image
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ inputs.context }}
+          file: ${{ inputs.dockerfile }}
+          tags: ${{ inputs.tags }}
+          push: ${{ inputs.push }}
+          load: ${{ inputs.load }}
+          build-args: ${{ inputs.build_args }}
+          platforms: ${{ inputs.platforms }}
+          target: ${{ inputs.target }}
+          cache-from: ${{ inputs.cache_from }}
+          cache-to: ${{ inputs.cache_to }}
