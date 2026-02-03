@@ -1,0 +1,92 @@
+name: Deploy Hugo site to Pages
+
+on:
+  workflow_call:
+    inputs:
+      go_version:
+        description: "Go version to use"
+        required: false
+        type: string
+        default: "1.22"
+      hugo_version:
+        description: "Hugo version to use"
+        required: false
+        type: string
+        default: "latest"
+      hugo_extended:
+        description: "Use Hugo extended"
+        required: false
+        type: boolean
+        default: true
+      hugo_environment:
+        description: "Hugo environment"
+        required: false
+        type: string
+        default: "production"
+      goprivate:
+        description: "GOPRIVATE value"
+        required: false
+        type: string
+        default: ""
+      gonosumdb:
+        description: "GONOSUMDB value"
+        required: false
+        type: string
+        default: ""
+      hugo_args:
+        description: "Extra hugo args"
+        required: false
+        type: string
+        default: ""
+
+jobs:
+  build:
+    name: Build Hugo Site
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ inputs.go_version }}
+
+      - name: Setup Hugo
+        uses: peaceiris/actions-hugo@v3
+        with:
+          hugo-version: ${{ inputs.hugo_version }}
+          extended: ${{ inputs.hugo_extended }}
+
+      - name: Setup Pages
+        id: pages
+        uses: actions/configure-pages@v5
+
+      - name: Build
+        env:
+          GOPRIVATE: ${{ inputs.goprivate }}
+          GONOSUMDB: ${{ inputs.gonosumdb }}
+          HUGO_ENVIRONMENT: ${{ inputs.hugo_environment }}
+          HUGO_ENV: ${{ inputs.hugo_environment }}
+        run: hugo --minify --baseURL "${{ steps.pages.outputs.base_url }}" ${{ inputs.hugo_args }}
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./public
+
+  deploy:
+    name: Deploy to GitHub Pages
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
