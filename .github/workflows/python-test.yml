@@ -53,8 +53,6 @@ jobs:
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
-        # Only start if use_database is true
-        if: ${{ inputs.use_database }}
 
       redis:
         image: redis:7-alpine
@@ -65,8 +63,6 @@ jobs:
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
-        # Only start if use_redis is true
-        if: ${{ inputs.use_redis }}
 
     steps:
       - name: Checkout code
