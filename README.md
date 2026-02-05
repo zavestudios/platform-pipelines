@@ -52,7 +52,7 @@ on: [pull_request]
 
 jobs:
   plan:
-    uses: eckslopez/platform-pipelines/.github/workflows/terraform-plan.yml@main
+    uses: zavestudios/platform-pipelines/.github/workflows/terraform-plan.yml@main
     with:
       tf_working_dir: ./terraform
       terraform_version: latest
@@ -77,7 +77,7 @@ on:
 
 jobs:
   apply:
-    uses: eckslopez/platform-pipelines/.github/workflows/terraform-apply.yml@main
+    uses: zavestudios/platform-pipelines/.github/workflows/terraform-apply.yml@main
     with:
       tf_working_dir: ./terraform
       terraform_version: latest
@@ -100,7 +100,7 @@ on: [push]
 
 jobs:
   terraform:
-    uses: eckslopez/platform-pipelines/.github/workflows/terraform-rds.yml@main
+    uses: zavestudios/platform-pipelines/.github/workflows/terraform-rds.yml@main
     with:
       tf_working_dir: ./terraform
       aws_region: us-east-1
@@ -130,7 +130,7 @@ on:
 
 jobs:
   security:
-    uses: eckslopez/platform-pipelines/.github/workflows/security-scan.yml@main
+    uses: zavestudios/platform-pipelines/.github/workflows/security-scan.yml@main
 ```
 
 ### Ruby on Rails
@@ -153,7 +153,7 @@ on: [pull_request, push]
 
 jobs:
   test:
-    uses: eckslopez/platform-pipelines/.github/workflows/rails-test.yml@main
+    uses: zavestudios/platform-pipelines/.github/workflows/rails-test.yml@main
     with:
       ruby_version: '3.2'
       run_system_tests: true
@@ -176,7 +176,7 @@ on: [pull_request]
 
 jobs:
   lint:
-    uses: eckslopez/platform-pipelines/.github/workflows/rails-lint.yml@main
+    uses: zavestudios/platform-pipelines/.github/workflows/rails-lint.yml@main
     with:
       ruby_version: '3.2'
       run_rubocop: true
@@ -209,7 +209,7 @@ permissions:
 
 jobs:
   deploy:
-    uses: eckslopez/platform-pipelines/.github/workflows/jekyll-deploy.yml@main
+    uses: zavestudios/platform-pipelines/.github/workflows/jekyll-deploy.yml@main
     with:
       ruby_version: '3.1'
 ```
@@ -231,7 +231,7 @@ on: [pull_request]
 
 jobs:
   quality:
-    uses: eckslopez/platform-pipelines/.github/workflows/jekyll-quality.yml@main
+    uses: zavestudios/platform-pipelines/.github/workflows/jekyll-quality.yml@main
     with:
       lychee_config_path: .github/lychee.toml
 ```
@@ -252,7 +252,7 @@ on: [pull_request]
 
 jobs:
   validate:
-    uses: eckslopez/platform-pipelines/.github/workflows/jekyll-validate-front-matter.yml@main
+    uses: zavestudios/platform-pipelines/.github/workflows/jekyll-validate-front-matter.yml@main
 ```
 
 ### Database
@@ -273,7 +273,7 @@ on: [workflow_dispatch]
 
 jobs:
   bootstrap:
-    uses: eckslopez/platform-pipelines/.github/workflows/db-bootstrap-psql.yml@main
+    uses: zavestudios/platform-pipelines/.github/workflows/db-bootstrap-psql.yml@main
     with:
       db_endpoint: my-db.region.rds.amazonaws.com
       db_name: myapp
@@ -288,7 +288,7 @@ jobs:
 
 ## Upcoming Workflows
 
-See [Issues](https://github.com/eckslopez/platform-pipelines/issues) for planned additions:
+See [Issues](https://github.com/zavestudios/platform-pipelines/issues) for planned additions:
 
 - tfsec security scanning workflow
 - Terraform cost estimation
@@ -309,13 +309,13 @@ When adding new workflows:
 **Pinning versions:**
 ```yaml
 # Pin to specific commit (most stable)
-uses: eckslopez/platform-pipelines/.github/workflows/terraform-rds.yml@a1b2c3d
+uses: zavestudios/platform-pipelines/.github/workflows/terraform-rds.yml@a1b2c3d
 
 # Pin to tag (recommended for production)
-uses: eckslopez/platform-pipelines/.github/workflows/terraform-rds.yml@v1.0.0
+uses: zavestudios/platform-pipelines/.github/workflows/terraform-rds.yml@v1.0.0
 
 # Use branch (gets latest updates)
-uses: eckslopez/platform-pipelines/.github/workflows/terraform-rds.yml@main
+uses: zavestudios/platform-pipelines/.github/workflows/terraform-rds.yml@main
 ```
 
 ## Repository Structure
