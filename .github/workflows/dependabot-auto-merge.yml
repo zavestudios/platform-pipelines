@@ -103,16 +103,16 @@ jobs:
           inputs.auto_merge_major == false
         run: |
           body=$(cat <<'EOF'
-**Major version update detected**: ${{ steps.metadata.outputs.dependency-names }} from ${{ steps.metadata.outputs.previous-version }} to ${{ steps.metadata.outputs.new-version }}
+          **Major version update detected**: ${{ steps.metadata.outputs.dependency-names }} from ${{ steps.metadata.outputs.previous-version }} to ${{ steps.metadata.outputs.new-version }}
 
-Auto-merge is disabled for major updates in this repository. Please review the following before merging:
-- Breaking changes in the changelog
-- Migration guide (if any)
-- Test coverage for new behavior
-- Impact on dependent services
+          Auto-merge is disabled for major updates in this repository. Please review the following before merging:
+          - Breaking changes in the changelog
+          - Migration guide (if any)
+          - Test coverage for new behavior
+          - Impact on dependent services
 
-Once reviewed, you can manually merge this PR.
-EOF
+          Once reviewed, you can manually merge this PR.
+          EOF
           )
           gh pr comment "$PR_URL" --body "$body"
         env:
