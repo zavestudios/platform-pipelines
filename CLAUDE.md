@@ -22,7 +22,7 @@ vim .github/workflows/new-workflow.yml
 # .github/workflows/test.yml in target repo:
 jobs:
   test:
-    uses: eckslopez/platform-pipelines/.github/workflows/new-workflow.yml@main
+    uses: zavestudios/platform-pipelines/.github/workflows/new-workflow.yml@main
 ```
 
 **Workflow structure:**
