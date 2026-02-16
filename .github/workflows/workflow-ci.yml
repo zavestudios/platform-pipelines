@@ -25,7 +25,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run actionlint
-        uses: rhysd/actionlint@v1
+        uses: reviewdog/action-actionlint@30f054494d5c1aa100ec4e57d1c7601100fc8f45 # v1.71.0
 
   zizmor:
     name: Audit Workflows (zizmor)
