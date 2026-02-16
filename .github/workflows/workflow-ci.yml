@@ -1,0 +1,60 @@
+name: Workflow CI
+
+on:
+  pull_request:
+    paths:
+      - .github/workflows/**
+      - .github/fixtures/**
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/**
+      - .github/fixtures/**
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  actionlint:
+    name: Lint Workflows (actionlint)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run actionlint
+        uses: rhysd/actionlint@v1
+
+  zizmor:
+    name: Audit Workflows (zizmor)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install zizmor
+        run: cargo install --locked zizmor
+
+      - name: Run zizmor
+        run: zizmor .github/workflows
+
+  smoke-security-scan:
+    name: Smoke Reusable Security Scan
+    uses: ./.github/workflows/security-scan.yml
+    with:
+      fetch_depth: 1
+
+  smoke-image-build:
+    name: Smoke Reusable Image Build
+    uses: ./.github/workflows/image-build.yml
+    with:
+      context: .github/fixtures/image-build
+      dockerfile: .github/fixtures/image-build/Dockerfile
+      tags: local/smoke:image-build
+      push: false
+      load: false
