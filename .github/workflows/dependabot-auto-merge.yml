@@ -18,6 +18,11 @@ on:
         type: boolean
         default: true
         required: false
+      enable_auto_approve:
+        description: 'Attempt PR approval before auto-merge (requires Actions approval permission)'
+        type: boolean
+        default: false
+        required: false
       merge_method:
         description: 'Merge method to use (merge, squash, or rebase)'
         type: string
@@ -29,7 +34,7 @@ permissions:
   pull-requests: write
 
 jobs:
-  auto-approve:
+  auto-merge:
     runs-on: ubuntu-latest
     if: github.actor == 'dependabot[bot]'
     steps:
@@ -40,21 +45,11 @@ jobs:
           github-token: "${{ secrets.GITHUB_TOKEN }}"
 
       - name: Auto-approve PR
+        if: inputs.enable_auto_approve == true
         run: gh pr review --approve "$PR_URL"
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  auto-merge:
-    runs-on: ubuntu-latest
-    needs: auto-approve
-    if: github.actor == 'dependabot[bot]'
-    steps:
-      - name: Dependabot metadata
-        id: metadata
-        uses: dependabot/fetch-metadata@v2
-        with:
-          github-token: "${{ secrets.GITHUB_TOKEN }}"
 
       - name: Wait for checks to complete
         run: |
