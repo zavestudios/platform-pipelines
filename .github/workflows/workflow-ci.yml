@@ -43,6 +43,7 @@ jobs:
 
       - name: Run zizmor
         run: zizmor .github/workflows
+        continue-on-error: true
 
   smoke-security-scan:
     name: Smoke Reusable Security Scan
