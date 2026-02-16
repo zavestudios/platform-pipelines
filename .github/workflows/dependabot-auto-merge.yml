@@ -36,11 +36,15 @@ permissions:
 jobs:
   auto-merge:
     runs-on: ubuntu-latest
-    if: github.actor == 'dependabot[bot]'
+    if: >
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.user.login == 'dependabot[bot]' &&
+      startsWith(github.event.pull_request.head.ref, 'dependabot/') &&
+      github.event.pull_request.head.repo.full_name == github.repository
     steps:
       - name: Dependabot metadata
         id: metadata
-        uses: dependabot/fetch-metadata@v2
+        uses: dependabot/fetch-metadata@21025c705c08248db411dc16f3619e6b5f9ea21a # v2
         with:
           github-token: "${{ secrets.GITHUB_TOKEN }}"
 
@@ -58,6 +62,16 @@ jobs:
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Validate merge method
+        id: merge_method
+        env:
+          MERGE_METHOD: ${{ inputs.merge_method }}
+        run: |
+          case "$MERGE_METHOD" in
+            merge|squash|rebase) echo "flag=--$MERGE_METHOD" >> "$GITHUB_OUTPUT" ;;
+            *) echo "Invalid merge method: $MERGE_METHOD" >&2; exit 1 ;;
+          esac
 
       - name: Enable auto-merge for patch updates
         if: |
