@@ -64,11 +64,15 @@ jobs:
       - name: Terraform Validate
         id: validate
         run: terraform validate -no-color
-
+      
       - name: Write TF Vars
-        if: ${{ secrets.TF_VARS }}
-        run: echo '${{ secrets.TF_VARS }}' > terraform.auto.tfvars.json
-
+        env:
+          TF_VARS: ${{ secrets.TF_VARS }}
+        run: |
+          if [ -n "$TF_VARS" ]; then
+            printf '%s' "$TF_VARS" > terraform.auto.tfvars.json
+          fi
+      
       - name: Terraform Plan
         id: plan
         run: |
