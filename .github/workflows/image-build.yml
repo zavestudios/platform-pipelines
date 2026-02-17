@@ -3,6 +3,11 @@ name: Image Build
 on:
   workflow_call:
     inputs:
+      context:
+        description: "Build context (deprecated; currently ignored and forced to .)"
+        required: false
+        type: string
+        default: "."
       dockerfile:
         description: 'Dockerfile path'
         required: false
