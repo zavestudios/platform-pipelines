@@ -44,10 +44,12 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
         with:
           terraform_version: ${{ inputs.terraform_version }}
 
@@ -75,34 +77,47 @@ jobs:
       
       - name: Terraform Plan
         id: plan
+        env:
+          ADDITIONAL_ARGS: ${{ inputs.additional_args }}
+          TF_VAR_FILE: ${{ inputs.tf_var_file }}
         run: |
           set -o pipefail
-          ARGS="${{ inputs.additional_args }}"
-          if [ -n "${{ inputs.tf_var_file }}" ]; then
-            ARGS="$ARGS -var-file=${{ inputs.tf_var_file }}"
+          ARGS=()
+          if [ -n "$ADDITIONAL_ARGS" ]; then
+            read -r -a ARGS <<< "$ADDITIONAL_ARGS"
           fi
-          terraform plan -no-color -input=false $ARGS | tee plan.txt
+          if [ -n "$TF_VAR_FILE" ]; then
+            ARGS+=("-var-file=$TF_VAR_FILE")
+          fi
+          terraform plan -no-color -input=false "${ARGS[@]}" | tee plan.txt
         continue-on-error: true
 
       - name: Comment Plan on PR
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7
         env:
-          PLAN: "${{ steps.plan.outputs.stdout }}"
+          TF_WORKING_DIR: ${{ inputs.tf_working_dir }}
+          FMT_OUTCOME: ${{ steps.fmt.outcome }}
+          INIT_OUTCOME: ${{ steps.init.outcome }}
+          VALIDATE_OUTCOME: ${{ steps.validate.outcome }}
+          PLAN_OUTCOME: ${{ steps.plan.outcome }}
+          GITHUB_ACTOR_NAME: ${{ github.actor }}
+          GITHUB_WORKFLOW_NAME: ${{ github.workflow }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const fs = require('fs');
-            const plan = fs.readFileSync('${{ inputs.tf_working_dir }}/plan.txt', 'utf8');
+            const path = `${process.env.TF_WORKING_DIR}/plan.txt`;
+            const plan = fs.readFileSync(path, 'utf8');
             const maxLength = 65536;
             const truncatedPlan = plan.length > maxLength
               ? plan.substring(0, maxLength) + '\n\n... (truncated)'
               : plan;
 
-            const output = `#### Terraform Format and Style 🖌\`${{ steps.fmt.outcome }}\`
-            #### Terraform Initialization ⚙️\`${{ steps.init.outcome }}\`
-            #### Terraform Validation 🤖\`${{ steps.validate.outcome }}\`
-            #### Terraform Plan 📖\`${{ steps.plan.outcome }}\`
+            const output = `#### Terraform Format and Style 🖌\`${process.env.FMT_OUTCOME}\`
+            #### Terraform Initialization ⚙️\`${process.env.INIT_OUTCOME}\`
+            #### Terraform Validation 🤖\`${process.env.VALIDATE_OUTCOME}\`
+            #### Terraform Plan 📖\`${process.env.PLAN_OUTCOME}\`
 
             <details><summary>Show Plan</summary>
 
@@ -112,7 +127,7 @@ jobs:
 
             </details>
 
-            *Pusher: @${{ github.actor }}, Working Directory: \`${{ inputs.tf_working_dir }}\`, Workflow: \`${{ github.workflow }}\`*`;
+            *Pusher: @${process.env.GITHUB_ACTOR_NAME}, Working Directory: \`${process.env.TF_WORKING_DIR}\`, Workflow: \`${process.env.GITHUB_WORKFLOW_NAME}\`*`;
 
             github.rest.issues.createComment({
               issue_number: context.issue.number,
