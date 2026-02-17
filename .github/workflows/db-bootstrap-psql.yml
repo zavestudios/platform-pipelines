@@ -35,7 +35,9 @@ jobs:
 
     steps:
       - name: Checkout caller repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
 
       - name: Install psql client
         run: |
@@ -45,12 +47,12 @@ jobs:
       - name: Run bootstrap SQL
         env:
           PGPASSWORD: ${{ secrets.DB_PASSWORD }}
+          ENDPOINT: ${{ inputs.db_endpoint }}
+          DB_NAME: ${{ inputs.db_name }}
+          DB_USER: ${{ inputs.db_user }}
+          SSLMODE: ${{ inputs.sslmode }}
+          SQL_PATHS: ${{ inputs.sql_paths }}
         run: |
-          ENDPOINT="${{ inputs.db_endpoint }}"
-          DB_NAME="${{ inputs.db_name }}"
-          DB_USER="${{ inputs.db_user }}"
-          SSLMODE="${{ inputs.sslmode }}"
-
           HOST="${ENDPOINT}"
           PORT="5432"
 
@@ -61,8 +63,7 @@ jobs:
           fi
 
           echo "Connecting to $HOST:$PORT/$DB_NAME as $DB_USER"
-          IFS=$'\n'
-          for file in ${{ inputs.sql_paths }}; do
+          while IFS= read -r file; do
             file_trimmed="$(echo "$file" | xargs)"
             if [ -z "$file_trimmed" ]; then
               continue
@@ -71,4 +72,4 @@ jobs:
             psql "host=$HOST port=$PORT dbname=$DB_NAME user=$DB_USER sslmode=$SSLMODE" \
               -v ON_ERROR_STOP=1 \
               -f "$file_trimmed"
-          done
+          done <<< "$SQL_PATHS"
