@@ -79,9 +79,10 @@ jobs:
           inputs.auto_merge_patch == true
         run: |
           echo "Auto-merging patch update"
-          gh pr merge --auto --${{ inputs.merge_method }} "$PR_URL"
+          gh pr merge --auto "$MERGE_FLAG" "$PR_URL"
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
+          MERGE_FLAG: ${{ steps.merge_method.outputs.flag }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Enable auto-merge for minor updates
@@ -90,9 +91,10 @@ jobs:
           inputs.auto_merge_minor == true
         run: |
           echo "Auto-merging minor update"
-          gh pr merge --auto --${{ inputs.merge_method }} "$PR_URL"
+          gh pr merge --auto "$MERGE_FLAG" "$PR_URL"
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
+          MERGE_FLAG: ${{ steps.merge_method.outputs.flag }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Enable auto-merge for major updates
@@ -101,9 +103,10 @@ jobs:
           inputs.auto_merge_major == true
         run: |
           echo "Auto-merging major update"
-          gh pr merge --auto --${{ inputs.merge_method }} "$PR_URL"
+          gh pr merge --auto "$MERGE_FLAG" "$PR_URL"
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
+          MERGE_FLAG: ${{ steps.merge_method.outputs.flag }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Comment on major updates requiring manual review
