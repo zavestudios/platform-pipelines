@@ -68,16 +68,18 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
 
       - name: Setup Ruby
-        uses: ruby/setup-ruby@v1
+        uses: ruby/setup-ruby@09a7688d3b55cf0e976497ff046b70949eeaccfd # v1
         with:
           ruby-version: ${{ inputs.ruby_version }}
           bundler-cache: ${{ inputs.bundler_cache }}
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: ${{ inputs.node_version }}
 
@@ -105,11 +107,19 @@ jobs:
 
       - name: Run custom test command
         if: ${{ inputs.test_command != '' }}
-        run: ${{ inputs.test_command }}
+        env:
+          TEST_COMMAND: ${{ inputs.test_command }}
+        run: |
+          if [[ "$TEST_COMMAND" =~ [\;\&\|\`\<\>\(\)\{\}] ]]; then
+            echo "Unsafe test_command input rejected" >&2
+            exit 1
+          fi
+          read -r -a TEST_ARGS <<< "$TEST_COMMAND"
+          "${TEST_ARGS[@]}"
 
       - name: Upload screenshots on failure
         if: failure() && inputs.run_system_tests
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: system-test-screenshots
           path: tmp/screenshots/
