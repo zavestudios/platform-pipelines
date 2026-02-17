@@ -113,9 +113,15 @@ jobs:
         if: |
           steps.metadata.outputs.update-type == 'version-update:semver-major' &&
           inputs.auto_merge_major == false
+        env:
+          DEPENDENCY_NAMES: ${{ steps.metadata.outputs.dependency-names }}
+          PREVIOUS_VERSION: ${{ steps.metadata.outputs.previous-version }}
+          NEW_VERSION: ${{ steps.metadata.outputs.new-version }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          body=$(cat <<'EOF'
-          **Major version update detected**: ${{ steps.metadata.outputs.dependency-names }} from ${{ steps.metadata.outputs.previous-version }} to ${{ steps.metadata.outputs.new-version }}
+          body=$(cat <<EOF
+          **Major version update detected**: ${DEPENDENCY_NAMES} from ${PREVIOUS_VERSION} to ${NEW_VERSION}
 
           Auto-merge is disabled for major updates in this repository. Please review the following before merging:
           - Breaking changes in the changelog
@@ -127,9 +133,6 @@ jobs:
           EOF
           )
           gh pr comment "$PR_URL" --body "$body"
-        env:
-          PR_URL: ${{ github.event.pull_request.html_url }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Comment on minor updates requiring manual review
         if: |
