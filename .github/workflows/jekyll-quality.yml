@@ -44,10 +44,12 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
 
       - name: Setup Ruby
-        uses: ruby/setup-ruby@v1
+        uses: ruby/setup-ruby@09a7688d3b55cf0e976497ff046b70949eeaccfd # v1
         with:
           ruby-version: ${{ inputs.ruby_version }}
           bundler-cache: true
@@ -56,12 +58,12 @@ jobs:
         run: bundle exec jekyll build
 
       - name: Markdown lint
-        uses: DavidAnson/markdownlint-cli2-action@v18
+        uses: DavidAnson/markdownlint-cli2-action@eb5ca3ab411449c66620fe7f1b3c9e10547144b0 # v18
         with:
           globs: ${{ inputs.markdown_globs }}
 
       - name: Link check
-        uses: lycheeverse/lychee-action@v1
+        uses: lycheeverse/lychee-action@2b973e86fc7b1f6b36a93795fe2c9c6ae1118621 # v1
         with:
           args: ${{ inputs.lychee_args }} ${{ inputs.lychee_config_path != '' && format('--config {0}', inputs.lychee_config_path) || '' }}
         env:
