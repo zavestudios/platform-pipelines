@@ -39,10 +39,12 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
 
       - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3
         with:
           terraform_version: ${{ inputs.terraform_version }}
 
@@ -60,9 +62,15 @@ jobs:
 
       - name: Terraform Apply
         id: apply
+        env:
+          ADDITIONAL_ARGS: ${{ inputs.additional_args }}
+          TF_VAR_FILE: ${{ inputs.tf_var_file }}
         run: |
-          ARGS="${{ inputs.additional_args }}"
-          if [ -n "${{ inputs.tf_var_file }}" ]; then
-            ARGS="$ARGS -var-file=${{ inputs.tf_var_file }}"
+          ARGS=()
+          if [ -n "$ADDITIONAL_ARGS" ]; then
+            read -r -a ARGS <<< "$ADDITIONAL_ARGS"
           fi
-          terraform apply -auto-approve -input=false $ARGS
+          if [ -n "$TF_VAR_FILE" ]; then
+            ARGS+=("-var-file=$TF_VAR_FILE")
+          fi
+          terraform apply -auto-approve -input=false "${ARGS[@]}"
