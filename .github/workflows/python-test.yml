@@ -23,6 +23,11 @@ on:
         required: false
         type: string
         default: '.'
+      constraints_url:
+        description: 'Optional pip constraints URL'
+        required: false
+        type: string
+        default: ''
       use_database:
         description: 'Start Postgres service container'
         required: false
@@ -81,11 +86,16 @@ jobs:
         working-directory: ${{ inputs.working_directory }}
         env:
           REQUIREMENTS_FILE: ${{ inputs.requirements_file }}
+          CONSTRAINTS_URL: ${{ inputs.constraints_url }}
         run: |
           python -m pip install --upgrade pip
           pip install pytest pytest-cov pytest-flask
           if [ -f "$REQUIREMENTS_FILE" ]; then
-            pip install -r "$REQUIREMENTS_FILE"
+            if [ -n "$CONSTRAINTS_URL" ]; then
+              pip install -c "$CONSTRAINTS_URL" -r "$REQUIREMENTS_FILE"
+            else
+              pip install -r "$REQUIREMENTS_FILE"
+            fi
           fi
 
       - name: Wait for PostgreSQL to be ready
@@ -104,16 +114,13 @@ jobs:
         working-directory: ${{ inputs.working_directory }}
         env:
           TEST_COMMAND: ${{ inputs.test_command }}
-          # Database connection
           DB_HOST: 127.0.0.1
           DB_PORT: 5432
           DB_NAME: test_db
           DB_USER: postgres
           DB_PASSWORD: test_password
-          # Redis connection
           REDIS_HOST: 127.0.0.1
           REDIS_PORT: 6379
-          # Flask settings
           FLASK_ENV: testing
           TESTING: true
         run: |
