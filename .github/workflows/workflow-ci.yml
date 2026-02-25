@@ -54,12 +54,18 @@ jobs:
     with:
       fetch_depth: 1
 
-  smoke-image-build:
-    name: Smoke Reusable Image Build
-    uses: ./.github/workflows/image-build.yml
+  smoke-container-build:
+    name: Smoke Reusable Container Build
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    uses: ./.github/workflows/container-build.yml
     with:
+      image_name: local/smoke-image-build
       context: .github/fixtures/image-build
       dockerfile: .github/fixtures/image-build/Dockerfile
-      tags: local/smoke:image-build
+      platforms: linux/amd64
       push: false
-      load: false
+    secrets:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

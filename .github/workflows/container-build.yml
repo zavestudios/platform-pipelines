@@ -1,0 +1,132 @@
+name: Reusable Container Build (GHCR)
+
+on:
+  workflow_call:
+    inputs:
+      image_name:
+        description: "Image name without registry, e.g. org/repo or org/image"
+        required: true
+        type: string
+      context:
+        description: "Build context path (deprecated; currently ignored and forced to .)"
+        required: false
+        type: string
+        default: "."
+      dockerfile:
+        description: "Dockerfile path relative to context"
+        required: false
+        type: string
+        default: "Dockerfile"
+      platforms:
+        description: "Comma-separated platforms, e.g. linux/amd64,linux/arm64"
+        required: false
+        type: string
+        default: "linux/amd64,linux/arm64"
+      tag_prefix:
+        description: "Optional tag prefix, e.g. app-"
+        required: false
+        type: string
+        default: ""
+      push:
+        description: "Push image (true/false). Use false for PRs if you wire separately."
+        required: false
+        type: boolean
+        default: true
+      fail_severity:
+        description: "Trivy severities to fail on"
+        required: false
+        type: string
+        default: "HIGH,CRITICAL"
+    secrets:
+      GH_TOKEN:
+        required: true
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  build_scan_sign:
+    runs-on: ubuntu-latest
+
+    outputs:
+      image: ${{ steps.meta.outputs.image }}
+      tag: ${{ steps.meta.outputs.tag }}
+      digest: ${{ steps.build.outputs.digest }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+
+      - name: Set up QEMU (multi-arch)
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Log in to GHCR
+        if: ${{ inputs.push }}
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GH_TOKEN }}
+
+      - name: Compute image tag
+        id: meta
+        env:
+          INPUT_TAG_PREFIX: ${{ inputs.tag_prefix }}
+          INPUT_IMAGE_NAME: ${{ inputs.image_name }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          SHORT_SHA="${GITHUB_SHA::7}"
+          TAG="${INPUT_TAG_PREFIX}sha-${SHORT_SHA}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "image=${REGISTRY}/${INPUT_IMAGE_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Build (and optionally push) with attestations
+        id: build
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          file: ${{ inputs.dockerfile }}
+          push: ${{ inputs.push }}
+          platforms: ${{ inputs.platforms }}
+          tags: |
+            ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          # BuildKit-attached attestations (SBOM + provenance).
+          # These are stored alongside the image in the OCI registry.
+          provenance: true
+          sbom: true
+
+      - name: Trivy scan (fail on configured severity)
+        if: ${{ inputs.push }}
+        uses: aquasecurity/trivy-action@6e7b7d1fd3e4fef0c5fa8cce1229c54b2c9bd0d8 # 0.24.0
+        with:
+          image-ref: ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.tag }}
+          severity: ${{ inputs.fail_severity }}
+          exit-code: "1"
+          ignore-unfixed: true
+
+      - name: Install Cosign
+        if: ${{ inputs.push }}
+        uses: sigstore/cosign-installer@4959ce089c160fddf62f7b42464195ba1a56d382 # v3.6.0
+
+      - name: Cosign sign (keyless, GitHub OIDC)
+        if: ${{ inputs.push }}
+        env:
+          COSIGN_EXPERIMENTAL: "true"
+          IMAGE_REF: ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          cosign sign --yes "${IMAGE_REF}"

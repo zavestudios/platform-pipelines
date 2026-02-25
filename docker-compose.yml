@@ -1,0 +1,11 @@
+services:
+  workflow-preflight:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    working_dir: /work
+    volumes:
+      - ./:/work
+    command: >-
+      bash -lc "actionlint .github/workflows/*.yml && zizmor .github/workflows"
+
