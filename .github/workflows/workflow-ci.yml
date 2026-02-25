@@ -56,6 +56,10 @@ jobs:
 
   smoke-container-build:
     name: Smoke Reusable Container Build
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
     uses: ./.github/workflows/container-build.yml
     with:
       image_name: local/smoke-image-build
