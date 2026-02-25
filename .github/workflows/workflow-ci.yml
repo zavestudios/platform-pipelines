@@ -64,7 +64,7 @@ jobs:
     with:
       image_name: local/smoke-image-build
       context: .github/fixtures/image-build
-      dockerfile: Dockerfile
+      dockerfile: .github/fixtures/image-build/Dockerfile
       platforms: linux/amd64
       push: false
     secrets:
