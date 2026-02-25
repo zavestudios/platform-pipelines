@@ -1,0 +1,48 @@
+name: Reusable Container Promote (by digest)
+
+on:
+  workflow_call:
+    inputs:
+      image:
+        description: "Full image name, e.g. ghcr.io/org/repo"
+        required: true
+        type: string
+      digest:
+        description: "Digest sha256:..."
+        required: true
+        type: string
+      environment:
+        description: "Environment tag: dev|staging|prod (or any tag you choose)"
+        required: true
+        type: string
+    secrets:
+      GH_TOKEN:
+        required: true
+
+permissions:
+  packages: write
+  id-token: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GH_TOKEN }}
+
+      - name: Retag by digest (no rebuild)
+        env:
+          INPUT_IMAGE: ${{ inputs.image }}
+          INPUT_DIGEST: ${{ inputs.digest }}
+          INPUT_ENV: ${{ inputs.environment }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker buildx imagetools create --tag "${INPUT_IMAGE}:${INPUT_ENV}" "${INPUT_IMAGE}@${INPUT_DIGEST}"
