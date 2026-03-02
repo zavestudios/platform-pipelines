@@ -117,6 +117,9 @@ jobs:
           severity: ${{ inputs.fail_severity }}
           exit-code: "1"
           ignore-unfixed: true
+        env:
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GH_TOKEN }}
 
       - name: Install Cosign
         if: ${{ inputs.push }}
