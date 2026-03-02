@@ -113,6 +113,7 @@ jobs:
         uses: aquasecurity/trivy-action@6e7b7d1fd3e4fef0c5fa8cce1229c54b2c9bd0d8 # 0.24.0
         with:
           image-ref: ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.tag }}
+          github-pat: ${{ secrets.GH_TOKEN }}
           severity: ${{ inputs.fail_severity }}
           exit-code: "1"
           ignore-unfixed: true
