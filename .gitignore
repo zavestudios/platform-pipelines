@@ -1,5 +1,7 @@
 # Local assistant/context files
 CLAUDE.md
+AGENTS.md
+strict-audit
 .claude/
 
 # macOS / OS noise

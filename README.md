@@ -2,6 +2,8 @@
 
 Centralized, reusable GitHub Actions workflows for ZaveStudios infrastructure and platform automation.
 
+**Repository Category:** `platform-service` (canonical classification in [REPO_TAXONOMY.md](https://github.com/zavestudios/platform-docs/blob/main/_platform/REPO_TAXONOMY.md))
+
 ## Purpose
 
 As ZaveStudios grows, we'll be managing infrastructure across multiple repositories, cloud providers, and environments. This repository centralizes our CI/CD pipeline definitions to ensure:
@@ -14,7 +16,7 @@ As ZaveStudios grows, we'll be managing infrastructure across multiple repositor
 
 ## Vision
 
-This repository serves as the single source of truth for:
+This repository is the centralized home for reusable workflow implementations for:
 - Terraform workflows (plan, apply, security scanning)
 - Database provisioning and bootstrapping
 - Infrastructure testing and validation
