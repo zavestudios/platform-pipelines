@@ -68,3 +68,4 @@ jobs:
           args: ${{ inputs.lychee_args }} ${{ inputs.lychee_config_path != '' && format('--config {0}', inputs.lychee_config_path) || '' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
