@@ -1,0 +1,94 @@
+name: Reusable Container Build and GitOps Dispatch
+
+on:
+  workflow_call:
+    inputs:
+      image_name:
+        description: "Image name without registry, e.g. org/repo or org/image"
+        required: true
+        type: string
+      dockerfile:
+        description: "Dockerfile path relative to repo root"
+        required: false
+        type: string
+        default: "Dockerfile"
+      platforms:
+        description: "Comma-separated platforms, e.g. linux/amd64,linux/arm64"
+        required: false
+        type: string
+        default: "linux/amd64,linux/arm64"
+      tag_prefix:
+        description: "Optional tag prefix, e.g. app-"
+        required: false
+        type: string
+        default: ""
+      fail_severity:
+        description: "Trivy severities to fail on"
+        required: false
+        type: string
+        default: "HIGH,CRITICAL"
+      push:
+        description: "Push image on this invocation"
+        required: false
+        type: boolean
+        default: true
+      dispatch_repository:
+        description: "Repository receiving the dispatch event, e.g. org/gitops"
+        required: true
+        type: string
+      dispatch_event_type:
+        description: "repository_dispatch event type"
+        required: true
+        type: string
+    secrets:
+      GH_TOKEN:
+        required: true
+      GITOPS_REPO_DISPATCH_TOKEN:
+        required: true
+    outputs:
+      image:
+        description: "Built image repository, e.g. ghcr.io/org/repo"
+        value: ${{ jobs.build.outputs.image }}
+      tag:
+        description: "Computed image tag"
+        value: ${{ jobs.build.outputs.tag }}
+      digest:
+        description: "Pushed image digest"
+        value: ${{ jobs.build.outputs.digest }}
+
+jobs:
+  build:
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+    uses: ./.github/workflows/container-build.yml
+    with:
+      image_name: ${{ inputs.image_name }}
+      dockerfile: ${{ inputs.dockerfile }}
+      platforms: ${{ inputs.platforms }}
+      tag_prefix: ${{ inputs.tag_prefix }}
+      push: ${{ inputs.push }}
+      fail_severity: ${{ inputs.fail_severity }}
+    secrets:
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
+
+  dispatch-gitops:
+    name: Dispatch digest promotion to gitops
+    if: ${{ inputs.push && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch digest promotion
+        uses: peter-evans/repository-dispatch@ff45666b9427631e3450c54a1bcbee4d9ff4d7c0 # v3
+        with:
+          token: ${{ secrets.GITOPS_REPO_DISPATCH_TOKEN }}
+          repository: ${{ inputs.dispatch_repository }}
+          event-type: ${{ inputs.dispatch_event_type }}
+          client-payload: >-
+            {
+              "digest": "${{ needs.build.outputs.digest }}",
+              "tag": "${{ needs.build.outputs.tag }}",
+              "source_repo": "${{ github.repository }}",
+              "source_sha": "${{ github.sha }}"
+            }
