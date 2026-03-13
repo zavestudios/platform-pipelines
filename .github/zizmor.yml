@@ -1,0 +1,13 @@
+rules:
+  secrets-outside-env:
+    ignore:
+      # Reusable workflows consume caller-provided secrets and don't own
+      # repository environments themselves, so zizmor's environment check
+      # is noisy here. Keep the audit enabled everywhere else.
+      - container-build-dispatch.yml
+      - container-build.yml
+      - container-promote.yml
+      - db-bootstrap-psql.yml
+      - terraform-apply.yml
+      - terraform-plan.yml
+      - terraform-rds.yml
