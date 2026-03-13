@@ -40,6 +40,16 @@ on:
     secrets:
       GH_TOKEN:
         required: true
+    outputs:
+      image:
+        description: "Built image repository, e.g. ghcr.io/org/repo"
+        value: ${{ jobs.build_scan_sign.outputs.image }}
+      tag:
+        description: "Computed image tag"
+        value: ${{ jobs.build_scan_sign.outputs.tag }}
+      digest:
+        description: "Pushed image digest"
+        value: ${{ jobs.build_scan_sign.outputs.digest }}
 
 permissions:
   contents: read

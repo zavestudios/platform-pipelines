@@ -39,14 +39,11 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Setup Rust
-        uses: dtolnay/rust-toolchain@631a55b12751854ce901bb631d5902ceb48146f7 # stable
-
       - name: Install zizmor
         run: cargo install --locked zizmor
 
       - name: Run zizmor
-        run: zizmor .github/workflows
+        run: zizmor --config .github/zizmor.yml .github/workflows
 
   smoke-security-scan:
     name: Smoke Reusable Security Scan

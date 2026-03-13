@@ -1,0 +1,89 @@
+name: Build Hugo site
+
+on:
+  workflow_call:
+    inputs:
+      go_version:
+        description: "Go version to use"
+        required: false
+        type: string
+        default: "1.22"
+      hugo_version:
+        description: "Hugo version to use"
+        required: false
+        type: string
+        default: "latest"
+      hugo_extended:
+        description: "Use Hugo extended"
+        required: false
+        type: boolean
+        default: true
+      hugo_environment:
+        description: "Hugo environment"
+        required: false
+        type: string
+        default: "production"
+      goprivate:
+        description: "GOPRIVATE value"
+        required: false
+        type: string
+        default: ""
+      gonosumdb:
+        description: "GONOSUMDB value"
+        required: false
+        type: string
+        default: ""
+      hugo_args:
+        description: "Extra hugo args"
+        required: false
+        type: string
+        default: ""
+
+jobs:
+  build:
+    name: Build Hugo Site
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Go
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5
+        with:
+          go-version: ${{ inputs.go_version }}
+
+      - name: Setup Hugo
+        uses: peaceiris/actions-hugo@e3b661c523413d13d642651a5ba5fc0d2b344c0d # v3
+        with:
+          hugo-version: ${{ inputs.hugo_version }}
+          extended: ${{ inputs.hugo_extended }}
+
+      - name: Ensure Relearn Theme
+        run: |
+          if [ ! -d themes/hugo-theme-relearn ]; then
+            git clone --depth 1 https://github.com/McShelby/hugo-theme-relearn themes/hugo-theme-relearn
+          fi
+
+      - name: Update Hugo Modules
+        env:
+          GOPRIVATE: ${{ inputs.goprivate }}
+          GONOSUMDB: ${{ inputs.gonosumdb }}
+        run: hugo mod get -u
+
+      - name: Build
+        env:
+          GOPRIVATE: ${{ inputs.goprivate }}
+          GONOSUMDB: ${{ inputs.gonosumdb }}
+          HUGO_ENVIRONMENT: ${{ inputs.hugo_environment }}
+          HUGO_ENV: ${{ inputs.hugo_environment }}
+          HUGO_ARGS: ${{ inputs.hugo_args }}
+        run: |
+          EXTRA_ARGS=()
+          if [ -n "$HUGO_ARGS" ]; then
+            read -r -a EXTRA_ARGS <<< "$HUGO_ARGS"
+          fi
+          hugo --config hugo.toml --minify "${EXTRA_ARGS[@]}"
