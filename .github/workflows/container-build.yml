@@ -125,7 +125,7 @@ jobs:
           image-ref: ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.tag }}
           github-pat: ${{ secrets.GH_TOKEN }}
           severity: ${{ inputs.fail_severity }}
-          exit-code: "1"
+          exit-code: ${{ inputs.fail_severity != '' && '1' || '0' }}
           ignore-unfixed: true
         env:
           TRIVY_USERNAME: ${{ github.actor }}
