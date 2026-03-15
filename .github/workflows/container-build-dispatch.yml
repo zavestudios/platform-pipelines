@@ -40,6 +40,11 @@ on:
         description: "repository_dispatch event type"
         required: true
         type: string
+      build_args:
+        description: "Newline-separated build arguments, e.g. 'ARG1=value1\nARG2=value2'"
+        required: false
+        type: string
+        default: ""
     secrets:
       GH_TOKEN:
         required: true
@@ -70,6 +75,7 @@ jobs:
       tag_prefix: ${{ inputs.tag_prefix }}
       push: ${{ inputs.push }}
       fail_severity: ${{ inputs.fail_severity }}
+      build_args: ${{ inputs.build_args }}
     secrets:
       GH_TOKEN: ${{ secrets.GH_TOKEN }}
 
