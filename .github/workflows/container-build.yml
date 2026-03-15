@@ -45,6 +45,9 @@ on:
     secrets:
       GH_TOKEN:
         required: true
+      BUILD_ARG_SECRETS:
+        description: "Optional: Newline-separated build arg secrets, e.g. 'ARG1=secret_value\nARG2=secret_value'"
+        required: false
     outputs:
       image:
         description: "Built image repository, e.g. ghcr.io/org/repo"
@@ -106,6 +109,31 @@ jobs:
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
           echo "image=${REGISTRY}/${INPUT_IMAGE_NAME}" >> "$GITHUB_OUTPUT"
 
+      - name: Prepare build arguments
+        id: build_args
+        env:
+          STATIC_BUILD_ARGS: ${{ inputs.build_args }}
+          SECRET_BUILD_ARGS: ${{ secrets.BUILD_ARG_SECRETS }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Combine static and secret build args
+          COMBINED_ARGS=""
+          if [ -n "$STATIC_BUILD_ARGS" ]; then
+            COMBINED_ARGS="$STATIC_BUILD_ARGS"
+          fi
+          if [ -n "$SECRET_BUILD_ARGS" ]; then
+            if [ -n "$COMBINED_ARGS" ]; then
+              COMBINED_ARGS="${COMBINED_ARGS}"$'\n'"${SECRET_BUILD_ARGS}"
+            else
+              COMBINED_ARGS="$SECRET_BUILD_ARGS"
+            fi
+          fi
+          # Use EOF delimiter to handle multiline output safely
+          echo "args<<EOF" >> "$GITHUB_OUTPUT"
+          echo "$COMBINED_ARGS" >> "$GITHUB_OUTPUT"
+          echo "EOF" >> "$GITHUB_OUTPUT"
+
       - name: Build (and optionally push) with attestations
         id: build
         uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
@@ -116,7 +144,7 @@ jobs:
           platforms: ${{ inputs.platforms }}
           tags: |
             ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.tag }}
-          build-args: ${{ inputs.build_args }}
+          build-args: ${{ steps.build_args.outputs.args }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           # BuildKit-attached attestations (SBOM + provenance).
