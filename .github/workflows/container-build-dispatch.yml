@@ -50,6 +50,9 @@ on:
         required: true
       GITOPS_REPO_DISPATCH_TOKEN:
         required: true
+      BUILD_ARG_SECRETS:
+        description: "Optional: Newline-separated build arg secrets, e.g. 'ARG1=secret_value\nARG2=secret_value'"
+        required: false
     outputs:
       image:
         description: "Built image repository, e.g. ghcr.io/org/repo"
@@ -78,6 +81,7 @@ jobs:
       build_args: ${{ inputs.build_args }}
     secrets:
       GH_TOKEN: ${{ secrets.GH_TOKEN }}
+      BUILD_ARG_SECRETS: ${{ secrets.BUILD_ARG_SECRETS }}
 
   dispatch-gitops:
     name: Dispatch digest promotion to gitops
