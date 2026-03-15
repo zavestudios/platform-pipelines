@@ -37,6 +37,11 @@ on:
         required: false
         type: string
         default: "HIGH,CRITICAL"
+      build_args:
+        description: "Newline-separated build arguments, e.g. 'ARG1=value1\nARG2=value2'"
+        required: false
+        type: string
+        default: ""
     secrets:
       GH_TOKEN:
         required: true
@@ -111,6 +116,7 @@ jobs:
           platforms: ${{ inputs.platforms }}
           tags: |
             ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.tag }}
+          build-args: ${{ inputs.build_args }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           # BuildKit-attached attestations (SBOM + provenance).
