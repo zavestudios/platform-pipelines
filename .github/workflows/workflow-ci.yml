@@ -29,7 +29,26 @@ jobs:
           persist-credentials: false
 
       - name: Enforce immutable pins for shared platform workflows
-        run: ./scripts/check-platform-workflow-ref-pinning.sh
+        run: |
+          violations="$(
+            rg -n --pcre2 \
+              'uses:\s*zavestudios/platform-pipelines/\.github/workflows/[^@[:space:]]+@(?![0-9a-f]{40}\b)[^[:space:]]+' \
+              .github/workflows || true
+          )"
+
+          if [[ -n "${violations}" ]]; then
+            cat <<EOF
+          Found non-compliant shared workflow refs. Governed repositories must pin
+          zavestudios/platform-pipelines reusable workflow refs to immutable
+          40-character commit SHAs.
+
+          Violations:
+          ${violations}
+          EOF
+            exit 1
+          fi
+
+          echo "All zavestudios/platform-pipelines reusable workflow refs are pinned to immutable SHAs."
 
   actionlint:
     name: Lint Workflows (actionlint)
@@ -56,7 +75,12 @@ jobs:
         run: cargo install --locked zizmor
 
       - name: Run zizmor
-        run: zizmor --config .github/zizmor.yml .github/workflows
+        run: |
+          if [[ -f .github/zizmor.yml ]]; then
+            zizmor --config .github/zizmor.yml .github/workflows
+          else
+            zizmor .github/workflows
+          fi
 
   smoke-security-scan:
     name: Smoke Reusable Security Scan
