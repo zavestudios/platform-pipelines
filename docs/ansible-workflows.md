@@ -146,6 +146,7 @@ jobs:
 Uses shared `platform-pipelines/workflow-ci.yml`:
 - **actionlint:** Validates workflow syntax and logic
 - **zizmor:** Security audit for workflows (script injection, permissions, action pinning)
+- **shared workflow ref policy:** Rejects `zavestudios/platform-pipelines` reusable workflow refs that are not pinned to immutable SHAs
 
 **Example implementation:**
 ```yaml
@@ -165,7 +166,7 @@ on:
 jobs:
   validate-workflows:
     name: Validate GitHub Actions Workflows
-    uses: zavestudios/platform-pipelines/.github/workflows/workflow-ci.yml@main
+    uses: zavestudios/platform-pipelines/.github/workflows/workflow-ci.yml@0123456789abcdef0123456789abcdef01234567
 ```
 
 **When to run manually:** After modifying workflow files

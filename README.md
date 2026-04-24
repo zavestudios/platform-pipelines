@@ -310,15 +310,18 @@ When adding new workflows:
 
 **Pinning versions:**
 ```yaml
-# Pin to specific commit (most stable)
-uses: zavestudios/platform-pipelines/.github/workflows/terraform-rds.yml@a1b2c3d
+# Governed repositories must pin to a specific 40-character commit SHA
+uses: zavestudios/platform-pipelines/.github/workflows/terraform-rds.yml@0123456789abcdef0123456789abcdef01234567
 
-# Pin to tag (recommended for production)
+# Mutable tags are not permitted for governed repositories
 uses: zavestudios/platform-pipelines/.github/workflows/terraform-rds.yml@v1.0.0
 
-# Use branch (gets latest updates)
+# Floating branches such as @main are not permitted for governed repositories
 uses: zavestudios/platform-pipelines/.github/workflows/terraform-rds.yml@main
 ```
+
+For governed `tenant` and `portfolio` repositories, shared workflow refs must use
+an immutable 40-character commit SHA.
 
 ## Repository Structure
 

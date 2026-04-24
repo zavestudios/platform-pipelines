@@ -1,6 +1,7 @@
 name: Workflow CI
 
 on:
+  workflow_call:
   pull_request:
     paths:
       - .github/workflows/**
@@ -18,6 +19,18 @@ permissions:
   pull-requests: read
 
 jobs:
+  shared-workflow-ref-policy:
+    name: Enforce Shared Workflow SHA Pinning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+
+      - name: Enforce immutable pins for shared platform workflows
+        run: ./scripts/check-platform-workflow-ref-pinning.sh
+
   actionlint:
     name: Lint Workflows (actionlint)
     runs-on: ubuntu-latest
@@ -47,12 +60,20 @@ jobs:
 
   smoke-security-scan:
     name: Smoke Reusable Security Scan
+    needs:
+      - shared-workflow-ref-policy
+      - actionlint
+      - zizmor
     uses: ./.github/workflows/security-scan.yml
     with:
       fetch_depth: 1
 
   smoke-container-build:
     name: Smoke Reusable Container Build
+    needs:
+      - shared-workflow-ref-policy
+      - actionlint
+      - zizmor
     permissions:
       contents: read
       packages: write
