@@ -84,6 +84,7 @@ jobs:
 
   smoke-security-scan:
     name: Smoke Reusable Security Scan
+    if: github.repository == 'zavestudios/platform-pipelines'
     needs:
       - shared-workflow-ref-policy
       - actionlint
@@ -94,6 +95,7 @@ jobs:
 
   smoke-container-build:
     name: Smoke Reusable Container Build
+    if: github.repository == 'zavestudios/platform-pipelines'
     needs:
       - shared-workflow-ref-policy
       - actionlint
