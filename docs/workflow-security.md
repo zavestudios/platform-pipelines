@@ -25,3 +25,4 @@ Policy:
 - Governed repositories must pin shared workflow refs to 40-character commit SHAs.
 - Floating refs such as `@main` and mutable tags are not permitted for governed consumers.
 - Local workflow refs such as `./.github/workflows/foo.yml` are outside the scope of this check.
+- When `workflow-ci.yml` runs as a reusable workflow, it evaluates the caller repository's workflow files directly and does not require caller-local copies of platform-pipelines helper assets.
