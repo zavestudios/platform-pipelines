@@ -46,3 +46,29 @@ Validation notes:
   has been renamed or removed, pull requests may hang in `Expected — Waiting for status to be reported`.
 - When job names change in reusable workflows, update the affected rulesets
   before or at the same time as the workflow merge.
+
+## Branch Hygiene
+
+To keep PR check behavior predictable:
+
+- Sync `main` locally before starting work.
+- Rebase the PR branch onto current `main` locally before pushing.
+- Push rebased branches with `--force-with-lease` when needed.
+- Do not use GitHub's `Update branch` button for normal workflow maintenance.
+
+Recommended sequence:
+
+```bash
+git checkout main
+git pull origin main
+git checkout <branch>
+git rebase main
+git push --force-with-lease
+```
+
+Why:
+
+- avoids UI-generated merge commits on PR branches
+- keeps branch history easier to reason about
+- ensures strict required checks validate the latest base branch state
+- reduces confusion about why checks rerun after a branch update
