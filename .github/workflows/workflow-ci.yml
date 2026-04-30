@@ -3,16 +3,11 @@ name: Workflow CI
 on:
   workflow_call:
   pull_request:
-    paths:
-      - .github/workflows/**
-      - .github/fixtures/**
-  push:
-    branches:
-      - main
-    paths:
-      - .github/workflows/**
-      - .github/fixtures/**
   workflow_dispatch:
+
+concurrency:
+  group: workflow-ci-${{ github.event.pull_request.number || github.ref || github.run_id }}
+  cancel-in-progress: true
 
 permissions:
   contents: read

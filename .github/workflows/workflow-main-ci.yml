@@ -1,0 +1,21 @@
+name: Workflow Main CI
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: workflow-main-ci-${{ github.ref || github.run_id }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+  packages: write
+  id-token: write
+
+jobs:
+  workflow-main:
+    uses: ./.github/workflows/workflow-ci.yml
