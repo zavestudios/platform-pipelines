@@ -1,0 +1,57 @@
+name: Kyverno Validate
+
+on:
+  workflow_call:
+    inputs:
+      manifests_artifact:
+        description: 'Artifact name containing rendered manifests to validate'
+        required: true
+        type: string
+      policies_artifact:
+        description: 'Artifact name containing enforced Kyverno ClusterPolicy files'
+        required: false
+        type: string
+        default: 'kyverno-enforce-policies'
+
+permissions:
+  contents: read
+
+jobs:
+  kyverno-validate:
+    name: Kyverno Policy Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download manifests
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: ${{ inputs.manifests_artifact }}
+          path: manifests
+
+      - name: Download policies
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: ${{ inputs.policies_artifact }}
+          path: policies
+
+      - name: Install kyverno CLI
+        env:
+          KYVERNO_VERSION: v1.16.4
+        run: |
+          curl -sLO "https://github.com/kyverno/kyverno/releases/download/${KYVERNO_VERSION}/kyverno-cli_${KYVERNO_VERSION}_linux_x86_64.tar.gz"
+          tar -xzf "kyverno-cli_${KYVERNO_VERSION}_linux_x86_64.tar.gz" kyverno
+          chmod +x kyverno
+          sudo mv kyverno /usr/local/bin/kyverno
+
+      - name: Validate manifests against enforced policies
+        run: |
+          if [[ -z "$(find policies -name '*.yaml' -o -name '*.yml' 2>/dev/null | head -1)" ]]; then
+            echo "No policy files found in policies/. Skipping validation."
+            exit 0
+          fi
+
+          if [[ -z "$(find manifests -name '*.yaml' -o -name '*.yml' 2>/dev/null | head -1)" ]]; then
+            echo "No manifest files found in manifests/. Skipping validation."
+            exit 0
+          fi
+
+          kyverno apply policies/ --resource manifests/ --detailed-results
