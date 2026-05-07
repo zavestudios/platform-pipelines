@@ -42,6 +42,16 @@ on:
         required: false
         type: string
         default: ""
+      provenance:
+        description: "Provenance attestation mode: false, mode=min, or mode=max. Default false for containerd/k3s compatibility."
+        required: false
+        type: string
+        default: "false"
+      sbom:
+        description: "Generate SBOM attestation. Default false for containerd/k3s compatibility."
+        required: false
+        type: boolean
+        default: false
     secrets:
       GH_TOKEN:
         required: true
@@ -147,10 +157,8 @@ jobs:
           build-args: ${{ steps.build_args.outputs.args }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          # BuildKit-attached attestations (SBOM + provenance).
-          # These are stored alongside the image in the OCI registry.
-          provenance: true
-          sbom: true
+          provenance: ${{ inputs.provenance }}
+          sbom: ${{ inputs.sbom }}
 
       - name: Trivy scan (fail on configured severity)
         if: ${{ inputs.push }}
