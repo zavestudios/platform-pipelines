@@ -52,6 +52,11 @@ on:
         required: false
         type: boolean
         default: false
+      build_paths:
+        description: "Optional newline-separated changed-file globs that should run the container build. Empty means always build."
+        required: false
+        type: string
+        default: ""
     secrets:
       GH_TOKEN:
         required: true
@@ -78,8 +83,114 @@ env:
   REGISTRY: ghcr.io
 
 jobs:
+  detect_changes:
+    runs-on: ubuntu-latest
+
+    outputs:
+      should_build: ${{ steps.detect.outputs.should_build }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Detect container build changes
+        id: detect
+        env:
+          BUILD_PATHS: ${{ inputs.build_paths }}
+          EVENT_NAME: ${{ github.event_name }}
+          BEFORE_SHA: ${{ github.event.before }}
+          AFTER_SHA: ${{ github.sha }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ -z "${BUILD_PATHS}" ]; then
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+            echo "No build_paths configured; container build will run."
+            exit 0
+          fi
+
+          if [ "${EVENT_NAME}" = "workflow_dispatch" ]; then
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+            echo "Manual workflow dispatch; container build will run."
+            exit 0
+          fi
+
+          case "${EVENT_NAME}" in
+            pull_request|pull_request_target)
+              BASE_SHA="${PR_BASE_SHA}"
+              HEAD_SHA="${PR_HEAD_SHA}"
+              ;;
+            push)
+              BASE_SHA="${BEFORE_SHA}"
+              HEAD_SHA="${AFTER_SHA}"
+              ;;
+            *)
+              echo "should_build=true" >> "$GITHUB_OUTPUT"
+              echo "Unsupported event '${EVENT_NAME}' for path gating; container build will run."
+              exit 0
+              ;;
+          esac
+
+          if [ -z "${BASE_SHA}" ] || [ "${BASE_SHA}" = "0000000000000000000000000000000000000000" ]; then
+            echo "should_build=true" >> "$GITHUB_OUTPUT"
+            echo "No usable base SHA; container build will run."
+            exit 0
+          fi
+
+          git cat-file -e "${BASE_SHA}^{commit}" || git fetch --no-tags --depth=1 origin "${BASE_SHA}"
+          git cat-file -e "${HEAD_SHA}^{commit}" || git fetch --no-tags --depth=1 origin "${HEAD_SHA}"
+          git diff --name-only "${BASE_SHA}" "${HEAD_SHA}" > changed-files.txt
+
+          python3 <<'PY'
+          import fnmatch
+          import os
+          from pathlib import Path
+
+          patterns = [
+              line.strip()
+              for line in os.environ["BUILD_PATHS"].splitlines()
+              if line.strip() and not line.strip().startswith("#")
+          ]
+          changed = [
+              line.strip()
+              for line in Path("changed-files.txt").read_text().splitlines()
+              if line.strip()
+          ]
+
+          matched = [
+              path
+              for path in changed
+              if any(fnmatch.fnmatch(path, pattern) for pattern in patterns)
+          ]
+
+          should_build = "true" if matched else "false"
+          with open(os.environ["GITHUB_OUTPUT"], "a", encoding="utf-8") as output:
+              output.write(f"should_build={should_build}\n")
+
+          print("Configured build path patterns:")
+          for pattern in patterns:
+              print(f"- {pattern}")
+          print("Changed files:")
+          for path in changed:
+              print(f"- {path}")
+          if matched:
+              print("Matched build-triggering files:")
+              for path in matched:
+                  print(f"- {path}")
+          else:
+              print("No changed files matched build_paths; container build will be skipped.")
+          PY
+
   build_scan_sign:
     runs-on: ubuntu-latest
+    needs: detect_changes
+    if: ${{ needs.detect_changes.outputs.should_build == 'true' }}
 
     outputs:
       image: ${{ steps.meta.outputs.image }}

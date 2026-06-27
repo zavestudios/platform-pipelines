@@ -45,6 +45,11 @@ on:
         required: false
         type: string
         default: ""
+      build_paths:
+        description: "Optional newline-separated changed-file globs that should run the container build. Empty means always build."
+        required: false
+        type: string
+        default: ""
     secrets:
       GH_TOKEN:
         required: true
@@ -79,13 +84,14 @@ jobs:
       push: ${{ inputs.push }}
       fail_severity: ${{ inputs.fail_severity }}
       build_args: ${{ inputs.build_args }}
+      build_paths: ${{ inputs.build_paths }}
     secrets:
       GH_TOKEN: ${{ secrets.GH_TOKEN }}
       BUILD_ARG_SECRETS: ${{ secrets.BUILD_ARG_SECRETS }}
 
   dispatch-gitops:
     name: Dispatch digest promotion to gitops
-    if: ${{ inputs.push && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+    if: ${{ inputs.push && github.event_name == 'push' && github.ref == 'refs/heads/main' && needs.build.outputs.digest != '' }}
     needs: build
     runs-on: ubuntu-latest
     steps:
