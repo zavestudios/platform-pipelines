@@ -51,13 +51,6 @@ jobs:
           ruby-version: ${{ inputs.ruby_version }}
           bundler-cache: true
 
-      - name: Install RuboCop
-        if: ${{ inputs.run_rubocop }}
-        run: |
-          if ! bundle show rubocop > /dev/null 2>&1; then
-            gem install rubocop rubocop-rails rubocop-performance
-          fi
-
       - name: Run RuboCop
         if: ${{ inputs.run_rubocop }}
         env:
@@ -70,16 +63,10 @@ jobs:
           if bundle show rubocop > /dev/null 2>&1; then
             bundle exec rubocop --format "$RUBOCOP_FORMAT"
           else
-            rubocop --format "$RUBOCOP_FORMAT"
+            echo "RuboCop is not present in this repository bundle. Add rubocop and required plugins to the Gemfile." >&2
+            exit 1
           fi
         continue-on-error: true
-
-      - name: Install Brakeman
-        if: ${{ inputs.run_brakeman }}
-        run: |
-          if ! bundle show brakeman > /dev/null 2>&1; then
-            gem install brakeman
-          fi
 
       - name: Run Brakeman
         if: ${{ inputs.run_brakeman }}
@@ -93,14 +80,8 @@ jobs:
           if bundle show brakeman > /dev/null 2>&1; then
             bundle exec brakeman --format "$BRAKEMAN_FORMAT" --no-pager
           else
-            brakeman --format "$BRAKEMAN_FORMAT" --no-pager
-          fi
-
-      - name: Install bundler-audit
-        if: ${{ inputs.run_bundler_audit }}
-        run: |
-          if ! bundle show bundler-audit > /dev/null 2>&1; then
-            gem install bundler-audit
+            echo "Brakeman is not present in this repository bundle. Add brakeman to the Gemfile." >&2
+            exit 1
           fi
 
       - name: Update bundler-audit database
@@ -109,7 +90,8 @@ jobs:
           if bundle show bundler-audit > /dev/null 2>&1; then
             bundle exec bundle-audit update
           else
-            bundle-audit update
+            echo "bundler-audit is not present in this repository bundle. Add bundler-audit to the Gemfile." >&2
+            exit 1
           fi
 
       - name: Run bundler-audit
@@ -118,5 +100,6 @@ jobs:
           if bundle show bundler-audit > /dev/null 2>&1; then
             bundle exec bundle-audit check
           else
-            bundle-audit check
+            echo "bundler-audit is not present in this repository bundle. Add bundler-audit to the Gemfile." >&2
+            exit 1
           fi

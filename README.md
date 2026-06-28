@@ -170,6 +170,10 @@ Rails code quality and security checks.
 - bundler-audit for dependency vulnerability scanning
 - Configurable to enable/disable individual checks
 
+**Requirements:**
+- Repositories must declare enabled lint/security tools in their own `Gemfile`
+  and lockfile. This workflow does not install ad-hoc latest gems at runtime.
+
 **Usage:**
 ```yaml
 # In your Rails repo
