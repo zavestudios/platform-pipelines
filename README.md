@@ -170,6 +170,10 @@ Rails code quality and security checks.
 - bundler-audit for dependency vulnerability scanning
 - Configurable to enable/disable individual checks
 
+**Requirements:**
+- Repositories must declare enabled lint/security tools in their own `Gemfile`
+  and lockfile. This workflow does not install ad-hoc latest gems at runtime.
+
 **Usage:**
 ```yaml
 # In your Rails repo
@@ -185,6 +189,44 @@ jobs:
       run_brakeman: true
       run_bundler_audit: true
 ```
+
+### Containers
+
+#### `.github/workflows/container-build.yml`
+Reusable GHCR container build workflow.
+
+**Features:**
+- Builds multi-architecture container images with Buildx
+- Optionally pushes images to GHCR
+- Runs Trivy and Cosign only for push/promote invocations
+- Supports optional changed-path gating through `build_paths`
+
+**Usage:**
+```yaml
+# In your container repo
+name: Build
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    uses: zavestudios/platform-pipelines/.github/workflows/container-build.yml@main
+    with:
+      image_name: zavestudios/example
+      dockerfile: Dockerfile
+      push: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      build_paths: |
+        Dockerfile
+        config/**
+        scripts/build/**
+        .github/workflows/build.yml
+```
+
+If `build_paths` is empty, the workflow preserves legacy behavior and always runs the container build. `workflow_dispatch` also always runs the build.
 
 ### Jekyll / Static Sites
 
