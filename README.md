@@ -6,7 +6,8 @@ Centralized, reusable GitHub Actions workflows for ZaveStudios infrastructure an
 
 ## Purpose
 
-As ZaveStudios grows, we'll be managing infrastructure across multiple repositories, cloud providers, and environments. This repository centralizes our CI/CD pipeline definitions to ensure:
+This repository centralizes the reusable CI/CD workflows currently consumed by
+ZaveStudios repositories to ensure:
 
 - **Consistency** - Every infrastructure repo uses the same validated patterns
 - **Security** - Security scanning and compliance checks enforced everywhere
@@ -14,107 +15,19 @@ As ZaveStudios grows, we'll be managing infrastructure across multiple repositor
 - **Quality** - Best practices codified and shared across all teams
 - **Speed** - Don't rebuild pipelines for each new infrastructure repo
 
-## Vision
-
-This repository is the centralized home for reusable workflow implementations for:
-- Terraform workflows (plan, apply, security scanning)
-- Database provisioning and bootstrapping
-- Infrastructure testing and validation
-- Compliance and security automation
-- Deployment pipelines for multiple cloud providers
-
-As our infrastructure footprint expands, this repo scales with us - whether we're deploying RDS instances, Kubernetes clusters, networking infrastructure, or application platforms.
-
 ## Architecture
 
-**Reusable Workflows** - All workflows use GitHub's `workflow_call` trigger, making them composable building blocks that can be called from any infrastructure repository.
-
-**Provider-Agnostic** - While we have provider-specific workflows (e.g., AWS OIDC), we maintain generic workflows that work with any infrastructure provider (AWS, GCP, Azure, libvirt, etc.).
+**Reusable Workflows** - Shared implementations use GitHub's `workflow_call`
+trigger. Repository-local CI validates those interfaces and their callers.
 
 **Separation of Concerns** - Pipeline logic lives here; infrastructure code lives in dedicated repos. Infrastructure repos stay focused on what they provision, not how they're deployed.
 
 ## Current Workflows
 
-### Terraform
-
-#### `.github/workflows/terraform-plan.yml`
-Generic Terraform plan workflow (provider-agnostic).
-
-**Features:**
-- Runs `terraform init`, `validate`, `fmt -check`, `plan`
-- Comments plan output on pull requests
-- Configurable Terraform version and working directory
-- Supports tfvars files and JSON variables
-
-**Usage:**
-```yaml
-# In your infrastructure repo
-name: Terraform Plan
-on: [pull_request]
-
-jobs:
-  plan:
-    uses: zavestudios/platform-pipelines/.github/workflows/terraform-plan.yml@main
-    with:
-      tf_working_dir: ./terraform
-      terraform_version: latest
-```
-
-#### `.github/workflows/terraform-apply.yml`
-Generic Terraform apply workflow (provider-agnostic).
-
-**Features:**
-- Runs `terraform init` and `apply`
-- Auto-approves apply
-- Configurable Terraform version and working directory
-- Supports tfvars files and JSON variables
-
-**Usage:**
-```yaml
-# In your infrastructure repo
-name: Terraform Apply
-on:
-  push:
-    branches: [main]
-
-jobs:
-  apply:
-    uses: zavestudios/platform-pipelines/.github/workflows/terraform-apply.yml@main
-    with:
-      tf_working_dir: ./terraform
-      terraform_version: latest
-```
-
-#### `.github/workflows/terraform-rds.yml`
-AWS-specific Terraform workflow with OIDC authentication.
-
-**Features:**
-- Assumes AWS IAM role via GitHub OIDC
-- Runs `terraform init`, `validate`, `plan`
-- Optionally runs `terraform apply`
-- Designed for AWS infrastructure repos
-
-**Usage:**
-```yaml
-# In your infrastructure repo
-name: Deploy RDS
-on: [push]
-
-jobs:
-  terraform:
-    uses: zavestudios/platform-pipelines/.github/workflows/terraform-rds.yml@main
-    with:
-      tf_working_dir: ./terraform
-      aws_region: us-east-1
-      run_apply: true
-    secrets:
-      AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
-```
-
 ### Security
 
 #### `.github/workflows/security-scan.yml`
-Secret scanning with Gitleaks.
+Secret scanning with TruffleHog.
 
 **Features:**
 - Scans repository for exposed secrets and credentials
@@ -132,7 +45,7 @@ on:
 
 jobs:
   security:
-    uses: zavestudios/platform-pipelines/.github/workflows/security-scan.yml@main
+    uses: zavestudios/platform-pipelines/.github/workflows/security-scan.yml@0123456789abcdef0123456789abcdef01234567
 ```
 
 ### Ruby on Rails
@@ -155,7 +68,7 @@ on: [pull_request, push]
 
 jobs:
   test:
-    uses: zavestudios/platform-pipelines/.github/workflows/rails-test.yml@main
+    uses: zavestudios/platform-pipelines/.github/workflows/rails-test.yml@0123456789abcdef0123456789abcdef01234567
     with:
       ruby_version: '3.2'
       run_system_tests: true
@@ -182,7 +95,7 @@ on: [pull_request]
 
 jobs:
   lint:
-    uses: zavestudios/platform-pipelines/.github/workflows/rails-lint.yml@main
+    uses: zavestudios/platform-pipelines/.github/workflows/rails-lint.yml@0123456789abcdef0123456789abcdef01234567
     with:
       ruby_version: '3.2'
       run_rubocop: true
@@ -214,7 +127,7 @@ on:
 
 jobs:
   build:
-    uses: zavestudios/platform-pipelines/.github/workflows/container-build.yml@main
+    uses: zavestudios/platform-pipelines/.github/workflows/container-build.yml@0123456789abcdef0123456789abcdef01234567
     with:
       image_name: zavestudios/example
       dockerfile: Dockerfile
@@ -253,7 +166,7 @@ permissions:
 
 jobs:
   deploy:
-    uses: zavestudios/platform-pipelines/.github/workflows/jekyll-deploy.yml@main
+    uses: zavestudios/platform-pipelines/.github/workflows/jekyll-deploy.yml@0123456789abcdef0123456789abcdef01234567
     with:
       ruby_version: '3.1'
 ```
@@ -275,7 +188,7 @@ on: [pull_request]
 
 jobs:
   quality:
-    uses: zavestudios/platform-pipelines/.github/workflows/jekyll-quality.yml@main
+    uses: zavestudios/platform-pipelines/.github/workflows/jekyll-quality.yml@0123456789abcdef0123456789abcdef01234567
     with:
       lychee_config_path: .github/lychee.toml
 ```
@@ -296,47 +209,12 @@ on: [pull_request]
 
 jobs:
   validate:
-    uses: zavestudios/platform-pipelines/.github/workflows/jekyll-validate-front-matter.yml@main
-```
-
-### Database
-
-#### `.github/workflows/db-bootstrap-psql.yml`
-PostgreSQL database bootstrapping workflow.
-
-**Features:**
-- Connects to PostgreSQL endpoint via `psql`
-- Runs SQL files for schema creation, roles, tenants, etc.
-- Supports SSL connections
-
-**Usage:**
-```yaml
-# In your infrastructure repo
-name: Bootstrap Database
-on: [workflow_dispatch]
-
-jobs:
-  bootstrap:
-    uses: zavestudios/platform-pipelines/.github/workflows/db-bootstrap-psql.yml@main
-    with:
-      db_endpoint: my-db.region.rds.amazonaws.com
-      db_name: myapp
-      db_user: admin
-      sql_paths: |
-        sql/01-schema.sql
-        sql/02-roles.sql
-        sql/03-seed.sql
-    secrets:
-      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+    uses: zavestudios/platform-pipelines/.github/workflows/jekyll-validate-front-matter.yml@0123456789abcdef0123456789abcdef01234567
 ```
 
 ## Upcoming Workflows
 
-See [Issues](https://github.com/zavestudios/platform-pipelines/issues) for planned additions:
-
-- tfsec security scanning workflow
-- Terraform cost estimation
-- Multi-environment deployment patterns
+See [Issues](https://github.com/zavestudios/platform-pipelines/issues) for planned additions.
 
 ## Contributing
 
@@ -353,13 +231,13 @@ When adding new workflows:
 **Pinning versions:**
 ```yaml
 # Governed repositories must pin to a specific 40-character commit SHA
-uses: zavestudios/platform-pipelines/.github/workflows/terraform-rds.yml@0123456789abcdef0123456789abcdef01234567
+uses: zavestudios/platform-pipelines/.github/workflows/container-build.yml@0123456789abcdef0123456789abcdef01234567
 
 # Mutable tags are not permitted for governed repositories
-uses: zavestudios/platform-pipelines/.github/workflows/terraform-rds.yml@v1.0.0
+uses: zavestudios/platform-pipelines/.github/workflows/container-build.yml@v1.0.0
 
 # Floating branches such as @main are not permitted for governed repositories
-uses: zavestudios/platform-pipelines/.github/workflows/terraform-rds.yml@main
+uses: zavestudios/platform-pipelines/.github/workflows/container-build.yml@main
 ```
 
 For governed `tenant` and `portfolio` repositories, shared workflow refs must use
@@ -371,17 +249,19 @@ an immutable 40-character commit SHA.
 platform-pipelines/
 ├── .github/
 │   └── workflows/
-│       ├── terraform-plan.yml                    # Generic Terraform plan
-│       ├── terraform-apply.yml                   # Generic Terraform apply
-│       ├── terraform-rds.yml                     # AWS Terraform with OIDC
-│       ├── security-scan.yml                     # Gitleaks secret scanning
+│       ├── container-build.yml                   # Container build and scan
+│       ├── container-build-dispatch.yml          # Build plus GitOps dispatch
+│       ├── container-promote.yml                 # Digest-based promotion
+│       ├── security-scan.yml                     # TruffleHog secret scanning
 │       ├── rails-test.yml                        # Rails test suite with PostgreSQL
 │       ├── rails-lint.yml                        # Rails lint & security checks
 │       ├── jekyll-deploy.yml                     # Jekyll GitHub Pages deploy
 │       ├── jekyll-quality.yml                    # Jekyll quality checks
 │       ├── jekyll-validate-front-matter.yml      # Jekyll front matter validation
-│       └── db-bootstrap-psql.yml                 # PostgreSQL bootstrap
-├── docs/                                          # Additional documentation (planned)
+│       ├── hugo-build.yml                         # Hugo build validation
+│       ├── hugo-deploy.yml                        # Hugo GitHub Pages deploy
+│       └── workflow-ci.yml                        # Workflow policy and smoke tests
+├── docs/                                          # Workflow documentation
 └── README.md
 ```
 
