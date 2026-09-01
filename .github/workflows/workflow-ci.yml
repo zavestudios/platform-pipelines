@@ -66,16 +66,15 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Install zizmor
-        run: cargo install --locked zizmor --version 1.30.0
-
       - name: Run zizmor
-        run: |
-          if [[ -f .github/zizmor.yml ]]; then
-            zizmor --config .github/zizmor.yml .github/workflows
-          else
-            zizmor .github/workflows
-          fi
+        uses: zizmorcore/zizmor-action@70fb788f84895a7701f5643d103d587e460b5c99 # v0.6.3
+        with:
+          inputs: .github/workflows
+          config: .github/zizmor.yml
+          version: 1.30.0
+          online-audits: false
+          advanced-security: false
+          annotations: true
 
   smoke-security-scan:
     name: Smoke Reusable Security Scan
