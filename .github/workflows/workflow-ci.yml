@@ -67,7 +67,7 @@ jobs:
           persist-credentials: false
 
       - name: Install zizmor
-        run: cargo install --locked zizmor
+        run: cargo install --locked zizmor --version 1.30.0
 
       - name: Run zizmor
         run: |

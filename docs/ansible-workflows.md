@@ -37,7 +37,7 @@ on:
 jobs:
   secret-scan:
     name: Scan for Secrets
-    uses: zavestudios/platform-pipelines/.github/workflows/security-scan.yml@main
+    uses: zavestudios/platform-pipelines/.github/workflows/security-scan.yml@0123456789abcdef0123456789abcdef01234567
     with:
       fetch_depth: 0  # Scan full history
 
@@ -203,7 +203,7 @@ on:
 jobs:
   build-and-scan:
     name: Build and Scan Ansible Container
-    uses: zavestudios/platform-pipelines/.github/workflows/container-build.yml@main
+    uses: zavestudios/platform-pipelines/.github/workflows/container-build.yml@0123456789abcdef0123456789abcdef01234567
     with:
       image_name: YOUR_ORG/ansible-control
       context: .
