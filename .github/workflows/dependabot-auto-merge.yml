@@ -48,8 +48,21 @@ jobs:
         with:
           github-token: "${{ secrets.GITHUB_TOKEN }}"
 
+      - name: Classify platform workflow updates
+        id: platform_update
+        env:
+          DEPENDENCY_NAMES: ${{ steps.metadata.outputs.dependency-names }}
+        run: |
+          if [[ "${DEPENDENCY_NAMES}" == *"zavestudios/platform-pipelines"* ]]; then
+            echo "requires_manual_review=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "requires_manual_review=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Auto-approve PR
-        if: inputs.enable_auto_approve == true
+        if: |
+          inputs.enable_auto_approve == true &&
+          steps.platform_update.outputs.requires_manual_review != 'true'
         run: gh pr review --approve "$PR_URL"
         env:
           PR_URL: ${{ github.event.pull_request.html_url }}
@@ -76,6 +89,7 @@ jobs:
       - name: Enable auto-merge for patch updates
         if: |
           steps.metadata.outputs.update-type == 'version-update:semver-patch' &&
+          steps.platform_update.outputs.requires_manual_review != 'true' &&
           inputs.auto_merge_patch == true
         run: |
           echo "Auto-merging patch update"
@@ -88,6 +102,7 @@ jobs:
       - name: Enable auto-merge for minor updates
         if: |
           steps.metadata.outputs.update-type == 'version-update:semver-minor' &&
+          steps.platform_update.outputs.requires_manual_review != 'true' &&
           inputs.auto_merge_minor == true
         run: |
           echo "Auto-merging minor update"
@@ -100,6 +115,7 @@ jobs:
       - name: Enable auto-merge for major updates
         if: |
           steps.metadata.outputs.update-type == 'version-update:semver-major' &&
+          steps.platform_update.outputs.requires_manual_review != 'true' &&
           inputs.auto_merge_major == true
         run: |
           echo "Auto-merging major update"
@@ -133,6 +149,21 @@ jobs:
           EOF
           )
           gh pr comment "$PR_URL" --body "$body"
+
+      - name: Comment on platform updates requiring manual review
+        if: |
+          steps.platform_update.outputs.requires_manual_review == 'true' &&
+          github.event.action == 'opened'
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh pr comment "$PR_URL" --body "$(cat <<'EOF'
+          This pull request updates shared ZaveStudios platform workflows and requires human review.
+
+          Confirm the reusable-workflow interface, caller permissions, and repository checks before merging.
+          EOF
+          )"
 
       - name: Comment on minor updates requiring manual review
         if: |

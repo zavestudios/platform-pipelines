@@ -1,0 +1,54 @@
+name: Publish Platform Release
+
+run-name: Publish platform-pipelines ${{ inputs.version }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Semantic version tag, for example v1.0.0"
+        required: true
+        type: string
+
+concurrency:
+  group: platform-pipelines-release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Publish immutable release reference
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      RELEASE_VERSION: ${{ inputs.version }}
+    steps:
+      - name: Validate release version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [[ ! "${RELEASE_VERSION}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Release version must match vMAJOR.MINOR.PATCH." >&2
+            exit 1
+          fi
+
+          if gh release view "${RELEASE_VERSION}" --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+            echo "Release ${RELEASE_VERSION} already exists." >&2
+            exit 1
+          fi
+
+      - name: Publish GitHub release
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release create "${RELEASE_VERSION}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --target "${GITHUB_SHA}" \
+            --title "${RELEASE_VERSION}" \
+            --generate-notes

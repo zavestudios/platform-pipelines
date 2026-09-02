@@ -11,7 +11,7 @@ ZaveStudios repositories to ensure:
 
 - **Consistency** - Every infrastructure repo uses the same validated patterns
 - **Security** - Security scanning and compliance checks enforced everywhere
-- **Maintainability** - Update pipeline logic once, applies to all repos
+- **Maintainability** - Publish pipeline logic once, then propagate it through automated caller pull requests
 - **Quality** - Best practices codified and shared across all teams
 - **Speed** - Don't rebuild pipelines for each new infrastructure repo
 
@@ -241,7 +241,10 @@ uses: zavestudios/platform-pipelines/.github/workflows/container-build.yml@main
 ```
 
 For governed `tenant` and `portfolio` repositories, shared workflow refs must use
-an immutable 40-character commit SHA.
+an immutable 40-character commit SHA. Releases provide semantic version metadata
+for Dependabot; callers still execute the release commit SHA. See
+[Shared Workflow Versioning](docs/workflow-versioning.md) for the release and
+automated caller-update contract.
 
 ## Repository Structure
 
@@ -273,4 +276,3 @@ MIT License - See [LICENSE](LICENSE) file
 
 **Maintainer:** Xavier Lopez
 **Organization:** ZaveStudios
-# A little test
