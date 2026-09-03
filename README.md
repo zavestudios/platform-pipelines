@@ -212,6 +212,15 @@ jobs:
     uses: zavestudios/platform-pipelines/.github/workflows/jekyll-validate-front-matter.yml@0123456789abcdef0123456789abcdef01234567
 ```
 
+### Hugo
+
+#### `.github/workflows/hugo-build.yml` and `.github/workflows/hugo-deploy.yml`
+
+Hugo validation and GitHub Pages deployment use an exact Hugo version by
+default and download only the module versions recorded in the caller's
+`go.mod` and `go.sum`. The workflows do not update module requirements or
+clone an independent theme revision during a build.
+
 ## Upcoming Workflows
 
 See [Issues](https://github.com/zavestudios/platform-pipelines/issues) for planned additions.
