@@ -4,10 +4,15 @@ on:
   workflow_call:
     inputs:
       markdown_globs:
-        description: 'Glob patterns for markdown files to check'
+        description: >-
+          Paths to check. Defaults to the repository root, which lychee walks
+          itself. Prefer a path over a glob. A glob is wrong twice here: the
+          value reaches a shell via eval in the action's entrypoint, and even
+          when quoted so lychee expands it, "**/*.md" does not match files at
+          the repository root — it requires at least one directory level.
         required: false
         type: string
-        default: '**/*.md'
+        default: '.'
       lychee_args:
         description: 'Additional lychee arguments'
         required: false
@@ -32,7 +37,12 @@ jobs:
       - name: Check links with lychee
         uses: lycheeverse/lychee-action@a8c4c7cb88f0c7386610c35eb25108e448569cb0 # v2
         with:
-          args: ${{ inputs.lychee_args }} ${{ inputs.markdown_globs }}
+          # markdown_globs is single-quoted so a caller-supplied glob reaches
+          # lychee intact instead of being expanded by the shell. Without the
+          # quotes the previous default "**/*.md" collapsed to "*/*.md" —
+          # bash does not treat ** as recursive unless globstar is set — so
+          # the check silently scanned exactly one directory level.
+          args: ${{ inputs.lychee_args }} '${{ inputs.markdown_globs }}'
           fail: ${{ inputs.fail_on_error }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
