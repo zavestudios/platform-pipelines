@@ -74,6 +74,8 @@ jobs:
           esac
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
@@ -112,6 +114,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
@@ -126,10 +130,13 @@ jobs:
           role-to-assume: ${{ inputs.plan-role-arn }}
 
       - name: Initialize remote state
+        env:
+          BACKEND_BUCKET: ${{ inputs.state-bucket }}
+          BACKEND_REGION: ${{ inputs.aws-region }}
         run: >-
           terraform init -lockfile=readonly
-          -backend-config="bucket=${{ inputs.state-bucket }}"
-          -backend-config="region=${{ inputs.aws-region }}"
+          -backend-config="bucket=$BACKEND_BUCKET"
+          -backend-config="region=$BACKEND_REGION"
         working-directory: ${{ inputs.working-directory }}
 
       - name: Produce speculative plan
@@ -159,6 +166,8 @@ jobs:
 
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
@@ -173,22 +182,26 @@ jobs:
           role-to-assume: ${{ inputs.plan-role-arn }}
 
       - name: Initialize remote state
+        env:
+          BACKEND_BUCKET: ${{ inputs.state-bucket }}
+          BACKEND_REGION: ${{ inputs.aws-region }}
         run: >-
           terraform init -lockfile=readonly
-          -backend-config="bucket=${{ inputs.state-bucket }}"
-          -backend-config="region=${{ inputs.aws-region }}"
+          -backend-config="bucket=$BACKEND_BUCKET"
+          -backend-config="region=$BACKEND_REGION"
         working-directory: ${{ inputs.working-directory }}
 
       - name: Prepare saved plan
+        env:
+          OPERATION: ${{ inputs.operation }}
+          TF_VAR_aws_region: ${{ inputs.aws-region }}
         run: |
-          if [ "${{ inputs.operation }}" = "destroy" ]; then
+          if [ "$OPERATION" = "destroy" ]; then
             terraform plan -destroy -out=tfplan -no-color
           else
             terraform plan -out=tfplan -no-color
           fi
         working-directory: ${{ inputs.working-directory }}
-        env:
-          TF_VAR_aws_region: ${{ inputs.aws-region }}
 
       - name: Upload approved-plan candidate
         if: inputs.operation != 'plan'
@@ -225,6 +238,8 @@ jobs:
 
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Set up Terraform
         uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
@@ -239,10 +254,13 @@ jobs:
           role-to-assume: ${{ inputs.apply-role-arn }}
 
       - name: Initialize remote state
+        env:
+          BACKEND_BUCKET: ${{ inputs.state-bucket }}
+          BACKEND_REGION: ${{ inputs.aws-region }}
         run: >-
           terraform init -lockfile=readonly
-          -backend-config="bucket=${{ inputs.state-bucket }}"
-          -backend-config="region=${{ inputs.aws-region }}"
+          -backend-config="bucket=$BACKEND_BUCKET"
+          -backend-config="region=$BACKEND_REGION"
         working-directory: ${{ inputs.working-directory }}
 
       - name: Download saved plan
