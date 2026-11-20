@@ -1,0 +1,276 @@
+name: Terraform AWS Delivery
+
+on:
+  workflow_call:
+    inputs:
+      aws-account-id:
+        description: AWS account the assumed roles must belong to
+        required: true
+        type: string
+      additional-artifact-paths:
+        description: Optional newline-delimited paths required when applying a saved plan
+        required: false
+        default: ""
+        type: string
+      apply-environment:
+        description: Protected GitHub environment required for apply and destroy
+        required: true
+        type: string
+      artifact-prefix:
+        description: Prefix for saved-plan artifact names
+        required: true
+        type: string
+      aws-region:
+        description: AWS Region containing the managed infrastructure
+        required: true
+        type: string
+      apply-role-arn:
+        description: IAM role ARN used to apply or destroy saved plans
+        required: true
+        type: string
+      operation:
+        description: Terraform operation to prepare or execute
+        required: false
+        default: plan
+        type: string
+      plan-role-arn:
+        description: IAM role ARN used to produce Terraform plans
+        required: true
+        type: string
+      state-bucket:
+        description: S3 bucket containing Terraform state
+        required: true
+        type: string
+      terraform-version:
+        description: Terraform CLI version
+        required: true
+        type: string
+      working-directory:
+        description: Terraform root directory in the caller repository
+        required: true
+        type: string
+
+env:
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "false"
+
+jobs:
+  validate:
+    name: Validate (${{ inputs.working-directory }})
+    permissions:
+      contents: read
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Validate operation
+        env:
+          OPERATION: ${{ inputs.operation }}
+        run: |
+          case "$OPERATION" in
+            plan|apply|destroy) ;;
+            *)
+              echo "operation must be plan, apply, or destroy" >&2
+              exit 1
+              ;;
+          esac
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: ${{ inputs.terraform-version }}
+
+      - name: Check formatting
+        run: terraform fmt -check -recursive
+        working-directory: ${{ inputs.working-directory }}
+
+      - name: Initialize without a backend
+        run: terraform init -backend=false -lockfile=readonly
+        working-directory: ${{ inputs.working-directory }}
+
+      - name: Validate configuration
+        run: terraform validate
+        working-directory: ${{ inputs.working-directory }}
+
+      - name: Run mocked plan tests
+        run: terraform test
+        working-directory: ${{ inputs.working-directory }}
+
+  pull-request-plan:
+    name: Speculative plan
+    permissions:
+      contents: read
+      id-token: write
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      inputs.aws-account-id != '' &&
+      inputs.plan-role-arn != '' &&
+      inputs.state-bucket != ''
+    needs: validate
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: ${{ inputs.terraform-version }}
+
+      - name: Configure read-only AWS credentials
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          allowed-account-ids: ${{ inputs.aws-account-id }}
+          aws-region: ${{ inputs.aws-region }}
+          role-to-assume: ${{ inputs.plan-role-arn }}
+
+      - name: Initialize remote state
+        env:
+          BACKEND_BUCKET: ${{ inputs.state-bucket }}
+          BACKEND_REGION: ${{ inputs.aws-region }}
+        run: >-
+          terraform init -lockfile=readonly
+          -backend-config="bucket=$BACKEND_BUCKET"
+          -backend-config="region=$BACKEND_REGION"
+        working-directory: ${{ inputs.working-directory }}
+
+      - name: Produce speculative plan
+        run: terraform plan -no-color
+        working-directory: ${{ inputs.working-directory }}
+        env:
+          TF_VAR_aws_region: ${{ inputs.aws-region }}
+
+  prepare-operation:
+    name: Prepare ${{ inputs.operation }}
+    permissions:
+      contents: read
+      id-token: write
+    if: github.event_name == 'workflow_dispatch'
+    needs: validate
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check required repository variables
+        env:
+          ACCOUNT_ID: ${{ inputs.aws-account-id }}
+          PLAN_ROLE_ARN: ${{ inputs.plan-role-arn }}
+          STATE_BUCKET: ${{ inputs.state-bucket }}
+        run: |
+          test -n "$ACCOUNT_ID" || { echo "ACCOUNT_ID is not set" >&2; exit 1; }
+          test -n "$PLAN_ROLE_ARN" || { echo "plan-role-arn is not set" >&2; exit 1; }
+          test -n "$STATE_BUCKET" || { echo "state-bucket is not set" >&2; exit 1; }
+
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: ${{ inputs.terraform-version }}
+
+      - name: Configure read-only AWS credentials
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          allowed-account-ids: ${{ inputs.aws-account-id }}
+          aws-region: ${{ inputs.aws-region }}
+          role-to-assume: ${{ inputs.plan-role-arn }}
+
+      - name: Initialize remote state
+        env:
+          BACKEND_BUCKET: ${{ inputs.state-bucket }}
+          BACKEND_REGION: ${{ inputs.aws-region }}
+        run: >-
+          terraform init -lockfile=readonly
+          -backend-config="bucket=$BACKEND_BUCKET"
+          -backend-config="region=$BACKEND_REGION"
+        working-directory: ${{ inputs.working-directory }}
+
+      - name: Prepare saved plan
+        env:
+          OPERATION: ${{ inputs.operation }}
+          TF_VAR_aws_region: ${{ inputs.aws-region }}
+        run: |
+          if [ "$OPERATION" = "destroy" ]; then
+            terraform plan -destroy -out=tfplan -no-color
+          else
+            terraform plan -out=tfplan -no-color
+          fi
+        working-directory: ${{ inputs.working-directory }}
+
+      - name: Upload approved-plan candidate
+        if: inputs.operation != 'plan'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ inputs.artifact-prefix }}-${{ inputs.operation }}-${{ github.run_id }}
+          path: |
+            ${{ inputs.working-directory }}/tfplan
+            ${{ inputs.additional-artifact-paths }}
+          if-no-files-found: error
+          retention-days: 1
+
+  execute-operation:
+    name: Execute ${{ inputs.operation }}
+    permissions:
+      contents: read
+      id-token: write
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      (inputs.operation == 'apply' || inputs.operation == 'destroy')
+    needs: prepare-operation
+    runs-on: ubuntu-24.04
+    environment: ${{ inputs.apply-environment }}
+    steps:
+      - name: Check required repository variables
+        env:
+          ACCOUNT_ID: ${{ inputs.aws-account-id }}
+          APPLY_ROLE_ARN: ${{ inputs.apply-role-arn }}
+          STATE_BUCKET: ${{ inputs.state-bucket }}
+        run: |
+          test -n "$ACCOUNT_ID" || { echo "ACCOUNT_ID is not set" >&2; exit 1; }
+          test -n "$APPLY_ROLE_ARN" || { echo "APPLY_ROLE_ARN is not set" >&2; exit 1; }
+          test -n "$STATE_BUCKET" || { echo "STATE_BUCKET is not set" >&2; exit 1; }
+
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: ${{ inputs.terraform-version }}
+
+      - name: Configure Terraform Apply AWS credentials
+        uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          allowed-account-ids: ${{ inputs.aws-account-id }}
+          aws-region: ${{ inputs.aws-region }}
+          role-to-assume: ${{ inputs.apply-role-arn }}
+
+      - name: Initialize remote state
+        env:
+          BACKEND_BUCKET: ${{ inputs.state-bucket }}
+          BACKEND_REGION: ${{ inputs.aws-region }}
+        run: >-
+          terraform init -lockfile=readonly
+          -backend-config="bucket=$BACKEND_BUCKET"
+          -backend-config="region=$BACKEND_REGION"
+        working-directory: ${{ inputs.working-directory }}
+
+      - name: Download saved plan
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: ${{ inputs.artifact-prefix }}-${{ inputs.operation }}-${{ github.run_id }}
+          path: ${{ inputs.working-directory }}
+
+      - name: Apply reviewed plan
+        run: terraform apply -no-color tfplan
+        working-directory: ${{ inputs.working-directory }}
+        env:
+          TF_VAR_aws_region: ${{ inputs.aws-region }}
